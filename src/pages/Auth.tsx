@@ -1,19 +1,23 @@
 import { useState, type FormEvent } from "react";
 import { supabase } from "../lib/supabase.ts";
+import { withoutAuthCallback } from "../lib/auth-callback.ts";
 import type { AuthMode } from "../features/events/types.ts";
 export function Auth({
   mode,
   setMode,
   back,
   notify,
+  initialError = "",
 }: {
+  initialError?: string;
   mode: AuthMode;
   setMode: (mode: AuthMode) => void;
   back: () => void;
   notify: (message: string) => void;
 }) {
-  const [notice, setNotice] = useState(""),
+  const [notice, setNotice] = useState(initialError),
     [busy, setBusy] = useState(false);
+  const [isError, setIsError] = useState(Boolean(initialError));
   const titles = {
     login: "Welcome back",
     signup: "Find your people",
@@ -31,6 +35,7 @@ export function Auth({
     if (!supabase || busy) return;
     setBusy(true);
     setNotice("");
+    setIsError(false);
     const form = new FormData(event.currentTarget),
       email = String(form.get("email") ?? "").trim(),
       password = String(form.get("password") ?? "");
@@ -45,11 +50,13 @@ export function Auth({
         notify("Welcome to Her Hour!");
       }
       if (mode === "signup") {
+        const name = String(form.get("name") ?? "").trim();
+        if (!name) throw Error("Please enter a display name.");
         const result = await supabase.auth.signUp({
           email,
           password,
           options: {
-            data: { display_name: String(form.get("name")).trim() },
+            data: { display_name: name },
             emailRedirectTo: location.origin,
           },
         });
@@ -76,11 +83,16 @@ export function Auth({
       if (mode === "update") {
         const { error } = await supabase.auth.updateUser({ password });
         if (error) throw error;
-        history.replaceState(null, "", location.pathname);
+        history.replaceState(
+          null,
+          "",
+          withoutAuthCallback(new URL(location.href)),
+        );
         back();
         notify("Password updated");
       }
     } catch (error) {
+      setIsError(true);
       setNotice(
         error instanceof Error
           ? error.message
@@ -105,13 +117,16 @@ export function Auth({
       </div>
       <div className="auth-panel">
         <div className="auth-card">
-          <button className="link-btn auth-back" onClick={back}>
+          <button className="link-btn auth-back" onClick={back} disabled={busy}>
             ← Explore the demo
           </button>
           <br />
           <span className="eyebrow">YOUR NEXT CHAPTER STARTS HERE</span>
           <h2>{titles[mode]}</h2>
-          <p className="section-intro" role={notice ? "status" : undefined}>
+          <p
+            className="section-intro"
+            role={notice ? (isError ? "alert" : "status") : undefined}
+          >
             {notice || "Find experiences, make new friends, and belong."}
           </p>
           <form onSubmit={submit}>
@@ -165,8 +180,10 @@ export function Auth({
               <>
                 <button
                   className="link-btn"
+                  disabled={busy}
                   onClick={() => {
                     setNotice("");
+                    setIsError(false);
                     setMode("signup");
                   }}
                 >
@@ -174,8 +191,10 @@ export function Auth({
                 </button>
                 <button
                   className="link-btn"
+                  disabled={busy}
                   onClick={() => {
                     setNotice("");
+                    setIsError(false);
                     setMode("reset");
                   }}
                 >
@@ -186,8 +205,10 @@ export function Auth({
               mode !== "update" && (
                 <button
                   className="link-btn"
+                  disabled={busy}
                   onClick={() => {
                     setNotice("");
+                    setIsError(false);
                     setMode("login");
                   }}
                 >

@@ -75,7 +75,7 @@ Permissive policies plus restrictive bucket boundaries prevent unrelated legacy 
 
 ## Setup and future schema changes
 
-See the root [README](../README.md) for local configuration, migration order, initial admin assignment and Auth URL setup. Keep the `private` schema unexposed and never ship a service-role key to the browser. No Supabase project is connected yet.
+See the root [README](../README.md) for local configuration, migration order, initial admin assignment and Auth URL setup. Keep the `private` schema unexposed and never ship a service-role key to the browser. Hosted authentication verification is documented in [authentication-verification.md](authentication-verification.md).
 
 For future changes, add a new timestamped migration, test both clean setup and upgrades with existing rows, then apply it to development before production. Preserve old migrations. For breaking changes, add/backfill first, deploy compatible consumers, and remove old fields in a later migration after migration of existing data.
 
@@ -83,4 +83,4 @@ For future changes, add a new timestamped migration, test both clean setup and u
 
 `npm run test:db` runs real PostgreSQL 17 in a disposable loopback cluster. Auth identity and Storage metadata tables are test fixtures; roles, RLS, triggers, constraints, grants and competing connections are real PostgreSQL behaviour. The suite verifies historical upgrades, over-capacity rollback, profile privacy, spoofed roles, rate limits, image policy boundaries and lock contention, then applies the organiser workflow and checks current permissions.
 
-`npm run test:e2e` verifies browser behaviour and Supabase request contracts with intercepted test responses. Hosted signup/confirmation/recovery, real JWTs, hosted Storage and email delivery still need validation when the Supabase project is connected. No production database is used by these checks.
+`npm run test:e2e` verifies browser behaviour and Supabase request contracts with intercepted test responses. Hosted authentication verification results are recorded in [authentication-verification.md](authentication-verification.md). Hosted Storage still needs integration testing; browser fixtures alone do not verify hosted services. No production database is used by these checks.

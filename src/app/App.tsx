@@ -16,7 +16,8 @@ import { Profile } from "../pages/Profile.tsx";
 import { Auth } from "../pages/Auth.tsx";
 import { useSession } from "../hooks/useSession.ts";
 import { useLiveCommunity } from "../hooks/useLiveCommunity.ts";
-import { supabase } from "../lib/supabase.ts";
+import { authCallback, supabase } from "../lib/supabase.ts";
+import { withoutAuthCallback } from "../lib/auth-callback.ts";
 import * as api from "../lib/community-api.ts";
 import {
   approve,
@@ -56,7 +57,9 @@ export function App() {
   const [demoState, setDemoState] = useState(() => loadState(browserStorage()));
   const [page, setPage] = useState<Page>("discover"),
     [filter, setFilter] = useState("All");
-  const [auth, setAuth] = useState<AuthMode | null>(null),
+  const [auth, setAuth] = useState<AuthMode | null>(() =>
+      authCallback.recovery && supabase ? "update" : null,
+    ),
     [dialog, setDialog] = useState<Dialog | null>(null);
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
@@ -66,7 +69,8 @@ export function App() {
     locked = useRef(false),
     timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const onRecovery = useCallback(() => setAuth("update"), []);
-  const user = useSession(onRecovery),
+  const session = useSession(onRecovery),
+    user = session.user,
     live = useLiveCommunity(user?.id),
     demo = !user;
   const data = demo ? demoState : live.data;
@@ -340,13 +344,41 @@ export function App() {
       {message}
     </div>
   );
-  if (auth)
+  if (session.loading)
+    return (
+      <div className="content" role="status">
+        <h1 className="page-title">Her Hour — Oh Sakhi!</h1>
+        <p>Checking your session…</p>
+      </div>
+    );
+  if (auth || session.error)
     return (
       <>
         <Auth
-          mode={auth}
-          setMode={setAuth}
+          mode={
+            session.error
+              ? authCallback.recovery
+                ? "reset"
+                : "login"
+              : (auth ?? "login")
+          }
+          initialError={session.error}
+          setMode={(next) => {
+            session.clearError();
+            history.replaceState(
+              null,
+              "",
+              withoutAuthCallback(new URL(location.href)),
+            );
+            setAuth(next);
+          }}
           back={() => {
+            session.clearError();
+            history.replaceState(
+              null,
+              "",
+              withoutAuthCallback(new URL(location.href)),
+            );
             setAuth(null);
             setPage("discover");
           }}
