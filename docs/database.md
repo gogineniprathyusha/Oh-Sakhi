@@ -14,10 +14,11 @@ Apply files in filename order, once each. Do not edit migrations that have alrea
 | `202610170002_authorization_and_registrations.sql` | Private profiles, safe event directory, transactional registration APIs and controlled grants                     |
 | `202610170003_storage.sql`                         | Private photo/cover buckets and owned immutable paths                                                             |
 | `202610170004_organizer_workflow.sql`              | Immediate organiser publication, persistent publication after edits, organiser-only seat decisions, admin removal |
+| `202610170005_event_images.sql`                    | Service-only cover commits and restrictions that require server image validation                                  |
 
-The historical foundation required administrator publication. **The final migration replaces that policy.** Run all six files before enabling real member use. The frontend now reads `meetup_directory` and uses registration RPCs; it does not write registration rows directly.
+The historical foundation required administrator publication. **The organiser-workflow migration replaces that policy.** Apply all seven files for the current application and deploy the `event-image` function for covers. The frontend reads `meetup_directory` and uses registration RPCs; it does not write registration rows directly. Existing manual SQL Editor installations should apply only outstanding files.
 
-The first foundation migration classifies legacy events as drafts because they previously had no publication status. Their registrations are preserved. The final migration keeps those drafts private to avoid unexpectedly publishing unfinished content. Their organiser can publish them directly, with no admin review. Newly created events default to `published`.
+The first foundation migration classifies legacy events as drafts because they previously had no publication status. Their registrations are preserved. The organiser-workflow migration keeps those drafts private to avoid unexpectedly publishing unfinished content. Their organiser can publish them directly, with no admin review. Newly created events default to `published`.
 
 ## Data and visibility
 
@@ -60,7 +61,7 @@ Use the current authenticated session. Arguments are named exactly as shown:
 | `review_report`           | `p_report_id`, `p_status`, `p_note`                              | Administrator                                                    |
 | `admin_statistics`        | None                                                             | Administrator                                                    |
 
-Own profile updates, event content updates/inserts, and report submissions use constrained table operations under RLS. `src/lib/community-api.ts` handles community data; `src/features/profile/profile-api.ts` handles the interest catalog and private profile photos. UI role flags control which buttons appear; PostgreSQL grants, RLS and RPC checks enforce access.
+Own profile updates, event content updates/inserts, and report submissions use constrained table operations under RLS. `src/lib/community-api.ts` handles community data; `src/features/profile/profile-api.ts` handles the interest catalog and private profile photos. Event cover changes invoke the `event-image` function. Its `authorize_event_image(p_actor,p_event)` and `commit_event_image(p_actor,p_event,p_previous,p_path)` RPCs are executable only by `service_role`, after the endpoint verifies the caller. UI role flags control which buttons appear; PostgreSQL grants, RLS and RPC checks enforce access.
 
 ## Image storage
 
@@ -71,7 +72,7 @@ Two private buckets:
 
 Supported MIME types are JPEG, PNG and WebP. Object paths are immutable: replacement uses a new unique path and then updates the owned profile/event reference. Overwrite/upsert is intentionally unavailable. Published organisers can replace covers without unpublishing. Closed/removed event covers cannot be changed. Public cover reads require a readable published event; profile photos remain private.
 
-Permissive policies plus restrictive bucket boundaries prevent unrelated legacy Storage policies from opening these two buckets. Other buckets remain unaffected. The profile editor now supports private uploads, replacement and removal, using authenticated downloads and local blob URLs. Hosted checks verified profile upload/reload/removal, anonymous-read denial and bucket MIME/size rejection. See [member-profiles.md](member-profiles.md) for details, cleanup behavior and the distinction between browser image checks and server enforcement. Event-cover upload UI and signed URL behavior remain outside this verification.
+Permissive policies plus restrictive bucket boundaries prevent unrelated legacy Storage policies from opening these two buckets. Other buckets remain unaffected. The profile editor supports private uploads, replacement and removal, using authenticated downloads and local blob URLs. Hosted checks verified profile upload/reload/removal, anonymous-read denial and bucket MIME/size rejection. See [member-profiles.md](member-profiles.md) for the profile boundary. Stage C cover changes require server decoding/re-encoding through `event-image`; direct browser cover insert/delete and reference writes are blocked. See [stage-c-events.md](stage-c-events.md) for deployment order, limits and cover verification. Signed URLs are not used by either editor.
 
 ## Setup and future schema changes
 
@@ -83,4 +84,4 @@ For future changes, add a new timestamped migration, test both clean setup and u
 
 `npm run test:db` runs real PostgreSQL 17 in a disposable loopback cluster. Auth identity and Storage metadata tables are test fixtures; roles, RLS, triggers, constraints, grants and competing connections are real PostgreSQL behaviour. The suite verifies historical upgrades, over-capacity rollback, profile privacy, spoofed roles, rate limits, image policy boundaries and lock contention, then applies the organiser workflow and checks current permissions.
 
-`npm run test:e2e` verifies browser behaviour and Supabase request contracts with intercepted test responses. Hosted authentication results are recorded in [authentication-verification.md](authentication-verification.md), and hosted profile/Storage results in [member-profiles.md](member-profiles.md). Browser fixtures alone do not verify hosted services. No production database is used by these checks.
+`npm run test:e2e` verifies browser behaviour and Supabase request contracts with intercepted test responses. Hosted authentication results are recorded in [authentication-verification.md](authentication-verification.md), profile/Storage results in [member-profiles.md](member-profiles.md), and events/cover/attendance results in [stage-c-events.md](stage-c-events.md). Browser fixtures alone do not verify hosted services. No production database is used by these checks.

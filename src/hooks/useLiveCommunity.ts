@@ -64,5 +64,18 @@ export function useLiveCommunity(userId: string | undefined) {
     loading,
     refresh,
     setAvatarPath,
+    setCoverPath: (id: string, path: string | null) => {
+      if (currentUser.current !== userId) return;
+      setData((previous) =>
+        previous
+          ? {
+              ...previous,
+              events: previous.events.map((event) =>
+                event.id === id ? { ...event, cover_path: path } : event,
+              ),
+            }
+          : previous,
+      );
+    },
   };
 }

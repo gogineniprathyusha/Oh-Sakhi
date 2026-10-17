@@ -21,4 +21,8 @@ export default ts.config(
       ],
     },
   },
+  {
+    files: ["supabase/functions/**/*.ts"],
+    languageOptions: { globals: { Deno: "readonly" } },
+  },
 );

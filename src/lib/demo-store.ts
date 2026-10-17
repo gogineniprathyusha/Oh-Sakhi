@@ -62,10 +62,12 @@ export function requestToJoin(event: CommunityEvent) {
   )
     return false;
   event.pending.push("demo");
+  event.request_status = "pending";
   return true;
 }
 
 export function withdraw(event: CommunityEvent) {
+  event.request_status = "cancelled";
   event.approved = event.approved.filter((id) => id !== "demo");
   event.pending = event.pending.filter((id) => id !== "demo");
 }

@@ -2,11 +2,11 @@ export const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const accepted = ["image/jpeg", "image/png", "image/webp"];
 
 /** Check size, declared type and file signature before decoding an upload. */
-export async function validatePhoto(file: File) {
+export async function validatePhoto(file: File, maxBytes = MAX_AVATAR_BYTES) {
   if (!accepted.includes(file.type))
     throw Error("Choose a JPEG, PNG or WebP photo.");
-  if (file.size === 0 || file.size > MAX_AVATAR_BYTES)
-    throw Error("Choose a photo smaller than 2 MiB.");
+  if (file.size === 0 || file.size > maxBytes)
+    throw Error(`Choose a photo up to ${maxBytes / 1024 / 1024} MiB.`);
   const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
   const png = [137, 80, 78, 71, 13, 10, 26, 10].every(
     (value, index) => bytes[index] === value,
@@ -28,8 +28,12 @@ export async function validatePhoto(file: File) {
 }
 
 /** Re-encode a raster image, limiting dimensions and removing source metadata. */
-export async function preparePhoto(file: File): Promise<Blob> {
-  await validatePhoto(file);
+export async function preparePhoto(
+  file: File,
+  maxBytes = MAX_AVATAR_BYTES,
+  maxEdge = 1024,
+): Promise<Blob> {
+  await validatePhoto(file, maxBytes);
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file);
@@ -43,7 +47,7 @@ export async function preparePhoto(file: File): Promise<Blob> {
       throw Error(
         "This photo is too large to process. Choose a smaller image.",
       );
-    const scale = Math.min(1, 1024 / Math.max(bitmap.width, bitmap.height));
+    const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(bitmap.width * scale));
     canvas.height = Math.max(1, Math.round(bitmap.height * scale));
@@ -54,7 +58,7 @@ export async function preparePhoto(file: File): Promise<Blob> {
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, "image/webp", 0.88),
     );
-    if (!blob || !accepted.includes(blob.type) || blob.size > MAX_AVATAR_BYTES)
+    if (!blob || !accepted.includes(blob.type) || blob.size > maxBytes)
       throw Error("The photo could not be prepared. Choose a smaller image.");
     return blob;
   } finally {

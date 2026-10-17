@@ -21,7 +21,8 @@ export function Discover({
     .filter(
       (event) =>
         (filter === "All" || event.category === filter) &&
-        (!event.status || event.status === "published"),
+        (!event.status || event.status === "published") &&
+        (demo || Date.parse(event.starts_at ?? "") > Date.now()),
     )
     .sort(
       (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time),

@@ -67,6 +67,11 @@ export async function loadCommunity(userId: string) {
         registration_deadline: row.registration_deadline,
         approved_total: row.approved_count,
         details_updated_at: row.details_updated_at,
+        cover_path: row.cover_path,
+        timezone: row.timezone ?? "America/New_York",
+        ends_at: row.ends_at,
+        host_label: row.host_label,
+        request_status: own.find((r) => r.user_id === userId)?.status,
       };
     },
   );
@@ -114,6 +119,11 @@ export async function saveEvent(
     place: input.place,
     capacity: input.capacity,
     description: input.description,
+    ...(input.registration_deadline
+      ? { registration_deadline: input.registration_deadline }
+      : {}),
+    ...(input.ends_at !== undefined ? { ends_at: input.ends_at } : {}),
+    ...(input.host_label ? { host_label: input.host_label } : {}),
   };
   const result = id
     ? await client()
@@ -121,10 +131,19 @@ export async function saveEvent(
         .update(values)
         .eq("id", id)
         .eq("host_id", userId)
+        .select("id")
+        .single()
     : await client()
         .from("meetups")
-        .insert({ ...values, host_id: userId });
+        .insert({
+          ...values,
+          host_id: userId,
+          status: input.status ?? "published",
+        })
+        .select("id")
+        .single();
   check(result.error);
+  return result.data!.id as string;
 }
 export async function requestEvent(id: string) {
   check((await client().rpc("request_meetup", { p_meetup_id: id })).error);

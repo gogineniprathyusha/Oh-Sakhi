@@ -74,7 +74,10 @@ test("demo RSVP persists across reload and can be withdrawn", async ({
     .click();
   await page.getByRole("button", { name: "Withdraw request" }).click();
   await page.keyboard.press("Escape");
-  await expect(page.locator(".event-card")).toHaveCount(1);
+  await expect(page.locator(".event-card")).toHaveCount(2);
+  await expect(
+    page.locator(".event-card").filter({ hasText: "A Little Pottery Date" }),
+  ).toContainText("Request withdrawn");
 });
 
 test("profile edits persist, remain escaped, and reset restores original RSVP data", async ({
@@ -104,7 +107,8 @@ test("profile edits persist, remain escaped, and reset restores original RSVP da
     .click();
   await page.getByRole("button", { name: "Cancel my spot" }).click();
   await page.keyboard.press("Escape");
-  await expect(page.locator(".event-card")).toHaveCount(0);
+  await expect(page.locator(".event-card")).toHaveCount(1);
+  await expect(page.locator(".event-card")).toContainText("Request withdrawn");
   await nav(page, "profile").click();
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Reset demo data" }).click();
@@ -115,7 +119,7 @@ test("profile edits persist, remain escaped, and reset restores original RSVP da
   await expect(page.locator(".event-card")).toHaveCount(1);
 });
 
-test("local hosting supports sample requests, approvals, capacity, edits and cancellation", async ({
+test("local hosting supports drafts, sample requests, approvals, capacity, edits and cancellation", async ({
   page,
 }) => {
   await page.goto("/");
@@ -132,12 +136,15 @@ test("local hosting supports sample requests, approvals, capacity, edits and can
   await page
     .getByLabel("Tell us about your plan")
     .fill("Come along for chai and relaxed conversations in a public café.");
-  await page.getByRole("button", { name: "Save demo plan" }).click();
+  await page.getByRole("button", { name: "Save draft" }).click();
   await expect(
     page.getByRole("heading", { name: "My plans", exact: true }),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "View details for Sunday chai & chats" })
+    .click();
+  await page
+    .getByRole("button", { name: "Publish demo plan", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Manage requests", exact: true })

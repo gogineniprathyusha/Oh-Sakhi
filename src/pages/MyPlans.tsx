@@ -14,7 +14,10 @@ export function MyPlans({
   demo: boolean;
 }) {
   const plans = events
-    .filter((event) => status(event) !== "none")
+    .filter(
+      (event) =>
+        status(event) !== "none" || event.request_status === "cancelled",
+    )
     .sort((a, b) => a.date.localeCompare(b.date));
   return (
     <div className="content">

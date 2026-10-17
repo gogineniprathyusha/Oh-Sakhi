@@ -16,3 +16,19 @@ export const isClosed = (event: CommunityEvent, demo: boolean) =>
 export const canRequest = (event: CommunityEvent, demo: boolean) =>
   !isClosed(event, demo) &&
   (demo || Date.parse(event.registration_deadline ?? "") > Date.now());
+export function availability(event: CommunityEvent, now = Date.now()) {
+  if (event.status && event.status !== "published")
+    return event.status.charAt(0).toUpperCase() + event.status.slice(1);
+  if (Date.parse(event.starts_at ?? "") <= now)
+    return event.ends_at && Date.parse(event.ends_at) > now
+      ? "In progress"
+      : "Past event";
+  if (Date.parse(event.registration_deadline ?? "") <= now)
+    return "Requests closed";
+  if (
+    (event.approved_total ?? event.attendees + event.approved.length) >=
+    event.capacity
+  )
+    return "Full";
+  return "Upcoming";
+}

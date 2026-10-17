@@ -33,6 +33,11 @@ export interface CommunityEvent {
   registration_deadline?: string;
   approved_total?: number;
   details_updated_at?: string;
+  timezone?: string;
+  ends_at?: string | null;
+  cover_path?: string | null;
+  host_label?: string;
+  request_status?: RequestStatus;
 }
 export interface DemoState {
   profile: Profile;
@@ -51,7 +56,13 @@ export interface Registration {
 export type EventInput = Pick<
   CommunityEvent,
   "title" | "category" | "date" | "time" | "place" | "capacity" | "description"
->;
+> & {
+  registration_deadline?: string;
+  ends_at?: string | null;
+  host_label?: string;
+  status?: "draft" | "published";
+  timezone?: string;
+};
 export interface MeetupRow {
   id: string;
   host_id: string;
@@ -69,6 +80,9 @@ export interface MeetupRow {
   starts_at: string;
   registration_deadline: string;
   details_updated_at?: string;
+  timezone?: string;
+  ends_at?: string | null;
+  cover_path?: string | null;
 }
 export interface RequestRow {
   meetup_id: string;
