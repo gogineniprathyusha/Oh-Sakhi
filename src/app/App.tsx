@@ -14,6 +14,8 @@ import { MyPlans } from "../pages/MyPlans.tsx";
 import { HostDesk } from "../pages/HostDesk.tsx";
 import { Circle } from "../pages/Circle.tsx";
 import { Auth } from "../pages/Auth.tsx";
+import { DeleteAccount } from "../features/account/DeleteAccount.tsx";
+import { LegalLinks } from "../components/LegalLinks.tsx";
 import { useProfilePhoto } from "../hooks/useProfilePhoto.ts";
 import {
   changePhoto,
@@ -347,6 +349,17 @@ export function App() {
       setPage("discover");
       notify("Logged out");
     });
+  const accountDeleted = async () => {
+    close();
+    setAuth(null);
+    setPage("discover");
+    const { error } = await supabase!.auth.signOut({ scope: "local" });
+    if (error)
+      throw Error(
+        "Your account was deleted. Refresh this page to clear the expired session.",
+      );
+    notify("Your account and associated community data have been deleted.");
+  };
   function submitReport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!current || !user) return;
@@ -445,6 +458,8 @@ export function App() {
             </button>
           </>
         )}
+        {live.error && user && <DeleteAccount deleted={accountDeleted} />}
+        <LegalLinks />
         {toast}
       </div>
     );
@@ -565,6 +580,7 @@ export function App() {
               reset={reset}
               login={login}
               logout={logout}
+              deleted={accountDeleted}
               email={user?.email}
             />
           </Suspense>

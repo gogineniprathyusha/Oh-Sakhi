@@ -1,4 +1,5 @@
 import { Avatar } from "./Avatar.tsx";
+import { LegalLinks } from "./LegalLinks.tsx";
 import type { ReactNode } from "react";
 import type { Page } from "../features/events/types.ts";
 interface Props {
@@ -64,6 +65,9 @@ export function Layout({
   };
   return (
     <>
+      <a className="skip-link" href="#view" inert={modalOpen}>
+        Skip to content
+      </a>
       {demo && (
         <div className="demo-banner" role="status" inert={modalOpen}>
           ✳ DEMO MODE — sample meetups only; changes stay in this browser. No
@@ -117,9 +121,15 @@ export function Layout({
               </button>
             </div>
           </header>
-          <main id="view" aria-live="polite">
+          <main id="view" tabIndex={-1}>
             {children}
           </main>
+          <footer className="community-footer">
+            <LegalLinks />
+            <p className="small muted">
+              Her Hour — Oh Sakhi! · Richmond, Virginia
+            </p>
+          </footer>
         </div>
         <nav className="mobile-nav" aria-label="Community">
           {navigation(true)}

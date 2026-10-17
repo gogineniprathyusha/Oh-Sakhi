@@ -21,9 +21,14 @@ export function Modal({ title, children, close, opener }: Props) {
       if (event.key !== "Tab") return;
       const elements = [
         ...(dialog.current?.querySelectorAll<HTMLElement>(
-          "button:not(:disabled),input,select,textarea,a[href]",
+          "button,input,select,textarea,a[href],[tabindex]",
         ) ?? []),
-      ];
+      ].filter(
+        (element) =>
+          !element.matches(":disabled,[hidden]") &&
+          element.tabIndex >= 0 &&
+          element.getClientRects().length > 0,
+      );
       const first = elements[0],
         last = elements.at(-1);
       if (event.shiftKey && document.activeElement === first) {

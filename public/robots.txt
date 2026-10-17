@@ -1,0 +1,3 @@
+# Pre-launch. Review/remove this restriction when the owner approves public launch.
+User-agent: *
+Disallow: /

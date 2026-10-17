@@ -3,6 +3,7 @@ import type { Profile as MemberProfile } from "../features/events/types.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { InterestPicker } from "../features/profile/InterestPicker.tsx";
 import { PhotoEditor } from "../features/profile/PhotoEditor.tsx";
+import { DeleteAccount } from "../features/account/DeleteAccount.tsx";
 interface Props {
   profile: MemberProfile;
   demo: boolean;
@@ -19,6 +20,7 @@ interface Props {
   changePhoto: (image: Blob | null) => Promise<void>;
   cleanupPending: boolean;
   cleanup: () => void;
+  deleted: () => Promise<void>;
 }
 function ProfileFields({
   profile,
@@ -157,6 +159,7 @@ export function Profile({
   changePhoto,
   cleanupPending,
   cleanup,
+  deleted,
 }: Props) {
   const fieldsKey = JSON.stringify([
     profile.name,
@@ -221,9 +224,12 @@ export function Profile({
           </div>
         </>
       ) : (
-        <button className="btn btn-outline" onClick={logout} disabled={busy}>
-          Log out
-        </button>
+        <>
+          <button className="btn btn-outline" onClick={logout} disabled={busy}>
+            Log out
+          </button>
+          <DeleteAccount deleted={deleted} busy={busy} />
+        </>
       )}
     </div>
   );
