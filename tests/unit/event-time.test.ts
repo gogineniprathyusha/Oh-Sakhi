@@ -36,7 +36,7 @@ test("availability distinguishes full, deadline-closed, in-progress and past eve
   );
   assert.equal(
     availability(event, Date.parse("2030-07-16T22:00:00Z")),
-    "Requests closed",
+    "RSVPs closed",
   );
   assert.equal(
     availability(event, Date.parse("2030-07-17T15:00:00Z")),

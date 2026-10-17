@@ -163,7 +163,7 @@ for (const width of [320, 390])
         fullPage: true,
       });
   });
-test("two isolated members request, approve, revoke, reconsider, withdraw and re-request", async ({
+test("two isolated members RSVP immediately, view attendees, cancel and rejoin without approval", async ({
   page,
   browser,
 }) => {
@@ -179,12 +179,14 @@ test("two isolated members request, approve, revoke, reconsider, withdraw and re
         exact: true,
       })
       .click();
-    await member
-      .getByRole("button", { name: "Request to join →", exact: true })
-      .click();
+    await member.getByRole("button", { name: "RSVP →", exact: true }).click();
     await expect(member.getByRole("dialog")).toContainText(
-      "waiting for the organiser",
+      "Your spot is confirmed.",
     );
+    expect(state.event.approved_count).toBe(1);
+    await page
+      .getByRole("button", { name: "Refresh plans", exact: true })
+      .click();
     await page
       .getByRole("button", {
         name: "View details for Richmond coffee",
@@ -192,22 +194,15 @@ test("two isolated members request, approve, revoke, reconsider, withdraw and re
       })
       .click();
     await page
-      .getByRole("button", { name: "Manage requests", exact: true })
-      .click();
-    await page.getByRole("button", { name: "Approve", exact: true }).click();
-    await expect(page.getByRole("dialog")).toContainText(
-      "1 / 2 approved seats",
-    );
-    await page
-      .getByRole("button", { name: "Revoke approval", exact: true })
+      .getByRole("button", { name: "View attendees", exact: true })
       .click();
     await expect(page.getByRole("dialog")).toContainText(
-      "0 / 2 approved seats",
+      "1 / 2 confirmed seats",
     );
-    await page
-      .getByRole("button", { name: "Approve again", exact: true })
-      .click();
-    await expect.poll(() => state.requests.get(memberId)).toBe("approved");
+    await expect(page.getByRole("dialog")).toContainText("Joining friend");
+    await expect(
+      page.getByRole("button", { name: /Approve|Decline|Revoke/ }),
+    ).toHaveCount(0);
     await member.reload();
     await member.locator('.sidebar [data-page="myplans"]').click();
     await expect(member.locator(".event-card")).toContainText("You’re going");
@@ -221,10 +216,9 @@ test("two isolated members request, approve, revoke, reconsider, withdraw and re
       .getByRole("button", { name: "Cancel my spot", exact: true })
       .click();
     await expect.poll(() => state.requests.get(memberId)).toBe("cancelled");
-    await member
-      .getByRole("button", { name: "Request to join →", exact: true })
-      .click();
-    await expect.poll(() => state.requests.get(memberId)).toBe("pending");
+    expect(state.event.approved_count).toBe(0);
+    await member.getByRole("button", { name: "RSVP →", exact: true }).click();
+    await expect.poll(() => state.requests.get(memberId)).toBe("approved");
     await expect(
       member.getByRole("button", { name: "Report this event", exact: true }),
     ).toBeVisible();
@@ -245,8 +239,11 @@ test("two isolated members request, approve, revoke, reconsider, withdraw and re
     await member.reload();
     await member.locator('.sidebar [data-page="myplans"]').click();
     await expect(member.locator(".event-card")).toContainText("Cancelled");
-    expect(state.event.status).toBe("cancelled");
+    expect(state.event.approved_count).toBe(0);
     expect(state.requests.get(memberId)).toBe("cancelled");
+    expect(
+      state.calls.some((call) => call.action === "decide_meetup_request"),
+    ).toBe(false);
   } finally {
     await context.close();
   }

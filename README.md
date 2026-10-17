@@ -18,7 +18,7 @@ No Supabase account or credentials are needed to explore the website. The six sa
 
 ## Demo and member accounts
 
-The demo banner identifies sample events and browser-only edits. You can request/withdraw sample seats, create/edit/cancel your own sample plan, and use **Manage requests → Add sample request** to explore organiser approvals. Cancelled plans remain in your history. Sample dates remain visible even after they pass.
+The demo banner identifies sample events and browser-only edits. You can RSVP/cancel sample seats, create/edit/cancel your own sample plan, and use **View attendees → Add sample attendee** to explore capacity. RSVPs confirm immediately when a seat is available. Cancelled plans remain in your history. Sample dates remain visible even after they pass.
 
 Demo state uses local storage key `her-hour-demo-v1`, preserving existing local edits when using the same browser and origin. **My profile → Reset demo data** restores the original examples. Blocked or corrupt storage does not prevent the site from loading. Demo data is never uploaded or copied to a real account.
 
@@ -30,14 +30,14 @@ Demo state uses local storage key `her-hour-demo-v1`, preserving existing local 
 | --------------------------------------------- | ----------------------------------------------------------- |
 | Create and publish an event immediately       | Any active member, under their own account                  |
 | Edit a draft or published event               | Its organiser; edits preserve publication and registrations |
-| Approve, decline, reconsider or revoke a seat | Its organiser only, within capacity                         |
-| Withdraw a request or approved seat           | The requesting member                                       |
+| RSVP and receive a confirmed seat immediately | Any active member, within capacity and before the deadline  |
+| Cancel an RSVP                                | The member who reserved the seat                            |
 | Cancel an event                               | Its organiser                                               |
 | Remove an event for a community violation     | An administrator, with a recorded reason                    |
 
-Administrators approve seats only for events they organise. An organiser can decide an existing request after the submission deadline until the event starts, but cannot undo a member’s withdrawal. Members must request again after withdrawing. Pending requests do not reserve seats.
+RSVPs are confirmed automatically. Organisers view attendees and manage event details; there is no attendance approval or decline step. Members can cancel their own RSVP and join again while registration is open and a seat is available. Capacity and deadlines are enforced by the database. See [docs/instant-rsvps.md](docs/instant-rsvps.md).
 
-Admin removal hides the event from discovery, cancels pending/approved registrations and preserves audit/history records. Its organiser cannot republish it. Removal uses a `removed` status instead of physically deleting records. Capacity, access and ownership are enforced in PostgreSQL, independently of the UI.
+Admin removal hides the event from discovery, cancels active RSVPs and preserves audit/history records. Its organiser cannot republish it. Removal uses a `removed` status instead of physically deleting records. Capacity, access and ownership are enforced in PostgreSQL, independently of the UI.
 
 ## Connect Supabase when ready
 
@@ -54,6 +54,8 @@ The application has been connected and its authentication flows checked against 
    supabase/migrations/202610170003_storage.sql
    supabase/migrations/202610170004_organizer_workflow.sql
    supabase/migrations/202610170005_event_images.sql
+   supabase/migrations/202610170006_instant_rsvps.sql
+   supabase/migrations/202610170007_rsvp_counter_fix.sql
    ```
 
    If some migrations are already applied, run only the outstanding ones. The organiser-workflow migration supersedes the earlier admin-publication rules. Previously saved drafts remain private and can be published directly by their organiser; existing registrations are retained. The Stage C image migration requires the `event-image` function for cover changes; follow [its deployment order](docs/stage-c-events.md).
@@ -128,7 +130,7 @@ Browser tests need Google Chrome and start isolated Vite servers on **5183 and 5
 
 Hosted signup, email confirmation, login, profile persistence and logout have been verified; the project owner also verified password recovery. Neighborhood editing, database interest choices, and private profile photo upload/replacement/removal are implemented and checked against hosted Supabase. Details and verification limits are recorded in [docs/member-profiles.md](docs/member-profiles.md).
 
-Stage C adds cover upload/replacement/removal, deadlines, end times, public organiser names, drafts and clearer availability/history. Organisers still publish immediately and control seats. See [docs/stage-c-events.md](docs/stage-c-events.md) for the server upload boundary, the new migration, deployment steps and verification results.
+Stage C adds cover upload/replacement/removal, deadlines, end times, public organiser names, drafts and clearer availability/history. Organisers publish immediately; member RSVPs confirm automatically within capacity. See [docs/stage-c-events.md](docs/stage-c-events.md) for the server upload boundary, the new migration, deployment steps and verification results.
 
 Basic event reporting and administrator removal are connected to the database APIs. A full admin dashboard, report-review/member-access screens, CSV export, legal/contact pages and account deletion are still pending. My circle clearly explains that connection requests and private messaging are not implemented. No notifications or real messages are simulated.
 

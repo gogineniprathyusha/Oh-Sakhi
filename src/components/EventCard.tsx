@@ -23,11 +23,11 @@ export function EventCard({
         : state === "going"
           ? "✓ You’re going"
           : state === "pending"
-            ? "⏳ Request pending"
+            ? "RSVP not confirmed"
             : event.declined?.includes("demo")
-              ? "Request declined"
+              ? "Not attending"
               : event.request_status === "cancelled"
-                ? "Request withdrawn"
+                ? "RSVP cancelled"
                 : `${seats(event)} spots left`;
   return (
     <article className="event-card">

@@ -149,7 +149,7 @@ test("configured registration and reset forms remain reachable from the preview"
   await expect(page.locator(".event-card")).toHaveCount(6);
 });
 
-test("real organiser screens publish and edit through the event API and use seat decision RPCs", async ({
+test("real organiser screens publish, view confirmed attendees and edit without approval controls", async ({
   page,
 }) => {
   const eventId = "00000000-0000-4000-8000-000000000010";
@@ -160,7 +160,7 @@ test("real organiser screens publish and edit through the event API and use seat
     body: Record<string, unknown>;
   }[] = [];
   let event: Record<string, unknown> | null = null;
-  let decision = "pending";
+  const decision = "approved";
   await page.route("https://her-hour-test.supabase.co/**", async (route) => {
     const request = route.request(),
       url = new URL(request.url());
@@ -216,7 +216,7 @@ test("real organiser screens publish and edit through the event API and use seat
           id: eventId,
           host_id: userId,
           host_name: "Her Hour host",
-          approved_count: 0,
+          approved_count: 1,
           status: "published",
           starts_at: "2099-10-17T14:30:00Z",
           registration_deadline: "2099-10-17T14:30:00Z",
@@ -238,11 +238,6 @@ test("real organiser screens publish and edit through the event API and use seat
           created_at: "2026-10-17T16:00:00Z",
         },
       ]);
-    if (url.pathname === "/rest/v1/rpc/decide_meetup_request") {
-      decision = request.postDataJSON().p_decision;
-      event = { ...event, approved_count: decision === "approved" ? 1 : 0 };
-      return json({ status: decision });
-    }
     return route.fulfill({
       status: 404,
       contentType: "application/json",
@@ -281,19 +276,13 @@ test("real organiser screens publish and edit through the event API and use seat
     page.getByRole("button", { name: "Remove for a violation" }),
   ).toHaveCount(0);
   await page
-    .getByRole("button", { name: "Manage requests", exact: true })
+    .getByRole("button", { name: "View attendees", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toContainText("Joining friend");
-  await page.getByRole("button", { name: "Approve", exact: true }).click();
-  await expect(page.getByRole("dialog")).toContainText("1 / 8 approved seats");
-  await page
-    .getByRole("button", { name: "Revoke approval", exact: true })
-    .click();
-  await expect(page.getByRole("dialog")).toContainText("0 / 8 approved seats");
-  await page
-    .getByRole("button", { name: "Approve again", exact: true })
-    .click();
-  await expect(page.getByRole("dialog")).toContainText("1 / 8 approved seats");
+  await expect(page.getByRole("dialog")).toContainText("1 / 8 confirmed seats");
+  await expect(
+    page.getByRole("button", { name: /Approve|Decline|Revoke/ }),
+  ).toHaveCount(0);
   await page.getByRole("button", { name: "Edit plan", exact: true }).click();
   await page.getByLabel("Area / meeting place").fill("Another public cafe");
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
@@ -315,12 +304,6 @@ test("real organiser screens publish and edit through the event API and use seat
     calls.filter((call) => call.path === "/rest/v1/meetup_requests"),
   ).toHaveLength(0);
   expect(
-    calls
-      .filter((call) => call.path === "/rest/v1/rpc/decide_meetup_request")
-      .map((call) => call.body),
-  ).toEqual([
-    { p_meetup_id: eventId, p_user_id: attendeeId, p_decision: "approved" },
-    { p_meetup_id: eventId, p_user_id: attendeeId, p_decision: "declined" },
-    { p_meetup_id: eventId, p_user_id: attendeeId, p_decision: "approved" },
-  ]);
+    calls.filter((call) => call.path === "/rest/v1/rpc/decide_meetup_request"),
+  ).toHaveLength(0);
 });

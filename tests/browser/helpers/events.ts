@@ -134,17 +134,18 @@ export async function eventMock(
             store.requests.set(key, "cancelled");
           store.event.approved_count = 0;
         }
-      } else if (action === "request_meetup") store.requests.set(id, "pending");
+      } else if (action === "request_meetup")
+        store.requests.set(id, "approved");
       else if (action === "withdraw_meetup_request")
         store.requests.set(id, "cancelled");
-      else if (action === "decide_meetup_request")
-        store.requests.set(body.p_user_id, body.p_decision);
       else return false;
       store.event.approved_count = [...store.requests.values()].filter(
         (value) => value === "approved",
       ).length;
       store.calls.push({ action, body });
-      await json({ status: body.p_status ?? body.p_decision ?? "pending" });
+      await json({
+        status: body.p_status ?? store.requests.get(id) ?? "approved",
+      });
       return true;
     }
     if (url.pathname === "/functions/v1/event-image") {
