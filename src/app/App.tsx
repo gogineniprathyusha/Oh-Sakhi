@@ -642,6 +642,10 @@ export function App() {
                 demo={demo}
                 busy={busy}
                 isAdmin={Boolean(live.data?.isAdmin)}
+                isOrganizer={
+                  demo ? current.host === "You" : current.host_id === user?.id
+                }
+                cancel={cancel}
                 manage={() => open({ kind: "manage", id: current.id })}
                 edit={() => open({ kind: "edit", id: current.id })}
                 report={() => open({ kind: "report", id: current.id })}
@@ -675,7 +679,7 @@ export function App() {
                 attendeeError={attendeeError}
                 decide={decide}
                 edit={() => open({ kind: "edit", id: current.id })}
-                cancel={cancel}
+                back={() => open({ kind: "details", id: current.id })}
                 addSample={() =>
                   updateDemo(current.id, (item) => {
                     let n = 1;

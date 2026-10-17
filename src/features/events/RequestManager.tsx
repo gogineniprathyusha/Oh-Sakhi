@@ -14,7 +14,7 @@ interface Props {
   ) => void;
   addSample: () => void;
   edit: () => void;
-  cancel: (event: CommunityEvent) => void;
+  back: () => void;
 }
 export function RequestManager({
   event: current,
@@ -25,7 +25,7 @@ export function RequestManager({
   decide,
   addSample,
   edit,
-  cancel,
+  back,
 }: Props) {
   return (
     <>
@@ -89,15 +89,11 @@ export function RequestManager({
             <button className="link-btn" onClick={edit}>
               Edit plan
             </button>
-            <button
-              className="link-btn"
-              disabled={busy}
-              onClick={() => cancel(current)}
-            >
-              {demo ? "Cancel this demo plan" : "Cancel event"}
-            </button>
           </div>
         )}
+      <button className="btn btn-light" onClick={back}>
+        Back to event
+      </button>
     </>
   );
 }

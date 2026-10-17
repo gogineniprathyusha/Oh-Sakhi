@@ -181,6 +181,9 @@ test("local hosting supports drafts, sample requests, approvals, capacity, edits
     .getByRole("button", { name: "Manage requests", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toContainText("4 / 4 approved seats");
+  await page
+    .getByRole("button", { name: "Back to event", exact: true })
+    .click();
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Cancel this demo plan" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
