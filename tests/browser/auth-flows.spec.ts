@@ -205,7 +205,9 @@ test("a suspended member sees an access message and can log out", async ({
   );
   await expect(page.locator(".sidebar")).toHaveCount(0);
   await page.getByRole("button", { name: "Log out", exact: true }).click();
-  await expect(page.locator(".demo-banner")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Log in / Join", exact: true }),
+  ).toBeVisible();
 });
 
 test("a rejected expired session is cleared and a fresh login remains available", async ({
@@ -246,7 +248,9 @@ test("a rejected expired session is cleared and a fresh login remains available"
     return true;
   });
   await page.goto(origin);
-  await expect(page.locator(".demo-banner")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Log in / Join", exact: true }),
+  ).toBeVisible();
   expect(
     await page.evaluate(() =>
       localStorage.getItem("sb-her-hour-test-auth-token"),
@@ -262,7 +266,7 @@ test("a rejected expired session is cleared and a fresh login remains available"
   await expect(page.locator('.sidebar [data-page="host"]')).toBeVisible();
 });
 
-test("session restoration waits for token refresh before exposing editable demo or member pages", async ({
+test("session restoration waits for token refresh before exposing member pages", async ({
   page,
 }) => {
   const value = session();
@@ -304,7 +308,7 @@ test("session restoration waits for token refresh before exposing editable demo 
     await expect(page.getByRole("status")).toContainText(
       "Checking your session",
     );
-    await expect(page.locator(".demo-banner,.sidebar")).toHaveCount(0);
+    await expect(page.locator(".sidebar")).toHaveCount(0);
   } finally {
     release();
   }

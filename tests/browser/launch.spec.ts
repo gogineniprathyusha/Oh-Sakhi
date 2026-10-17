@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { authMock, origin, storedSession } from "./helpers/auth.ts";
 import { adminMock } from "./helpers/admin.ts";
+import { eventMock } from "./helpers/events.ts";
 const policies = [
   ["privacy", "Privacy Policy"],
   ["terms", "Terms of Use"],
@@ -51,7 +52,9 @@ test("footer and auth information links work, and keyboard users can skip naviga
   page,
 }) => {
   await page.goto("/");
-  await expect(page.locator(".event-card")).toHaveCount(6);
+  await expect(
+    page.getByRole("heading", { name: "Find your next plan" }),
+  ).toBeVisible();
   await page.keyboard.press("Tab");
   await expect(
     page.getByRole("link", { name: "Skip to content" }),
@@ -63,7 +66,9 @@ test("footer and auth information links work, and keyboard users can skip naviga
   await page
     .getByRole("link", { name: "Back to community", exact: false })
     .click();
-  await expect(page.locator(".event-card")).toHaveCount(6);
+  await expect(
+    page.getByRole("heading", { name: "Find your next plan" }),
+  ).toBeVisible();
   await authMock(page);
   await page.goto(origin);
   await page
@@ -178,7 +183,9 @@ test("account deletion requires deliberate confirmation, clears password on fail
   await page
     .getByRole("button", { name: "Permanently delete my account" })
     .click();
-  await expect(page.locator(".demo-banner")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Log in / Join", exact: true }),
+  ).toBeVisible();
   await expect(page.locator("#toast")).toContainText("have been deleted");
   expect(state.calls.at(-1)).toEqual({
     password: "temporary-password",
@@ -216,11 +223,13 @@ test("administrator and upcoming-host preconditions prevent deletion submissions
   ).toBeVisible();
   expect(state.calls).toHaveLength(0);
 });
-test("demo homepage, event dialog and admin dashboard meet automated accessibility checks", async ({
+test("member homepage, event dialog and admin dashboard meet automated accessibility checks", async ({
   page,
 }) => {
-  await page.goto("/");
-  await expect(page.locator(".event-card")).toHaveCount(6);
+  await eventMock(page);
+  await expect(
+    page.getByRole("heading", { name: "Find your next plan" }),
+  ).toBeVisible();
   let scan = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
     .analyze();

@@ -1,5 +1,8 @@
 # Stage D — Administration and moderation
 
+> Update: browser demo mode has been removed. Signed-out visitors now browse published Supabase events and sign in for account actions. Demo references below describe earlier-stage behavior and verification.
+
+
 Stage D preserves the existing cream/plum design, Vite/React/TypeScript frontend, Supabase integration and immediate publication/RSVP rules. Event emails are deferred to Stage F.
 
 ## Features

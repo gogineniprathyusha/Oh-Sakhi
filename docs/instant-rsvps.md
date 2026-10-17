@@ -1,5 +1,8 @@
 # Instant RSVPs
 
+> Update: browser demo mode has been removed. Signed-out visitors now browse published Supabase events and sign in for account actions. Demo references below describe earlier-stage behavior and verification.
+
+
 This change supersedes organiser approval of attendance. Events still publish immediately, organisers edit/cancel their own events, and administrators retain violation-removal access.
 
 ## Current behavior

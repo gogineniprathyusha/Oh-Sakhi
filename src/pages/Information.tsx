@@ -102,9 +102,8 @@ export function Information({ page }: { page: InformationPage }) {
             </p>
             <p>
               Your browser stores session information to keep you signed in.
-              Demo profiles and sample RSVPs remain in your browser’s local
-              storage and are never copied into real accounts. You can reset
-              demo data from My profile or clear it in your browser.
+              Event reservations and profile changes are saved to your account
+              through Supabase.
             </p>
             <h2>Deletion and retention</h2>
             <p>
@@ -130,9 +129,9 @@ export function Information({ page }: { page: InformationPage }) {
             <h2>Your choices</h2>
             <p>
               You can update your profile, remove your photo, cancel your RSVP,
-              reset local demo data, or delete your account. Contact us about
-              access, correction or deletion questions. We will review requests
-              and verify identity where appropriate.
+              delete your account, or clear browser session data. Contact us
+              about access, correction or deletion questions. We will review
+              requests and verify identity where appropriate.
             </p>
           </>
         ) : page === "terms" ? (
@@ -157,8 +156,7 @@ export function Information({ page }: { page: InformationPage }) {
               Meet in appropriate public venues, respect the venue’s rules and
               consider your own access, transport and personal needs. An event
               listing or RSVP does not guarantee the organiser’s identity, an
-              event’s quality or another participant’s conduct. Demo meetups are
-              examples and are not confirmed gatherings.
+              event’s quality or another participant’s conduct.
             </p>
             <h2>Your content and community access</h2>
             <p>

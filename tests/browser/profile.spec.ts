@@ -125,7 +125,7 @@ test("photo upload, replacement, reload and removal use private owned objects", 
   );
   await page.reload();
   await page.locator('.sidebar [data-page="profile"]').click();
-  await expect(page.locator(".demo-profile-heading img")).toBeVisible();
+  await expect(page.locator(".profile-heading img")).toBeVisible();
   expect(
     state.calls
       .filter((call) => call.action === "download")
@@ -247,7 +247,7 @@ test("failed old-photo cleanup can be retried without repeating an upload", asyn
   );
 });
 
-test("logout revokes the local photo URL and never transfers photo data to demo storage", async ({
+test("logout revokes the local photo URL and clears the member identity", async ({
   page,
 }) => {
   await profileMock(page, true);
@@ -255,7 +255,9 @@ test("logout revokes the local photo URL and never transfers photo data to demo 
   await expect(page.locator("#top-avatar img")).toBeVisible();
   const url = await page.locator("#top-avatar img").getAttribute("src");
   await page.getByRole("button", { name: "Log out", exact: true }).click();
-  await expect(page.locator(".demo-banner")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Log in / Join", exact: true }),
+  ).toBeVisible();
   await expect(page.locator("#top-avatar img")).toHaveCount(0);
   expect(
     await page.evaluate(async (value) => {
@@ -267,9 +269,9 @@ test("logout revokes the local photo URL and never transfers photo data to demo 
       }
     }, url),
   ).toBe(false);
-  expect(
-    await page.evaluate(() => localStorage.getItem("her-hour-demo-v1") ?? ""),
-  ).not.toContain("blob:");
+  expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain(
+    "blob:",
+  );
 });
 
 for (const width of [320, 390])

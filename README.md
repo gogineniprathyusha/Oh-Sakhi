@@ -1,6 +1,6 @@
 # Her Hour — Oh Sakhi!
 
-Richmond’s women’s friendship and experiences community. The application uses **Vite, React and TypeScript**, the approved preview’s original CSS, and **Supabase Auth + PostgreSQL**. One frontend serves both the browser-only demo and real member accounts.
+Richmond’s women’s friendship and experiences community. The application uses **Vite, React and TypeScript**, the approved preview’s original CSS, and **Supabase Auth + PostgreSQL**. Signed-out visitors browse published events; members use real accounts and database-backed RSVPs.
 
 ## Run on your Mac
 
@@ -14,15 +14,13 @@ npm run dev
 
 Open the local URL printed by Vite, usually **http://localhost:5173**. Run these commands from **Oh Sakhi** itself; the redundant `her-hour-v3` directory has been removed. Existing terminals running the old project should be stopped with Control-C and restarted here.
 
-No Supabase account or credentials are needed to explore the website. The six samples, hero, branding, navigation, category filters, profile editor and local hosting retain the original interactive HTML design. Desktop and mobile reference comparisons are included in the browser tests. The original preview in Downloads is untouched.
+The hero, branding, navigation, event artwork and category filters retain the original interactive HTML design. Configure Supabase to load real events and enable accounts. Desktop and mobile style comparisons against the original preview are included in the browser tests.
 
-## Demo and member accounts
+## Visitors and member accounts
 
-The demo banner identifies sample events and browser-only edits. You can RSVP/cancel sample seats, create/edit/cancel your own sample plan, and use **View attendees → Add sample attendee** to explore capacity. RSVPs confirm immediately when a seat is available. Cancelled plans remain in your history. Sample dates remain visible even after they pass.
+The homepage displays upcoming published events from Supabase, including public organiser labels and seat availability. Visitors can browse event details; hosting, RSVPs, profiles and personal plans require login. There are no sample events, browser-only bookings or editable guest profiles.
 
-Demo state uses local storage key `her-hour-demo-v1`, preserving existing local edits when using the same browser and origin. **My profile → Reset demo data** restores the original examples. Blocked or corrupt storage does not prevent the site from loading. Demo data is never uploaded or copied to a real account.
-
-**Log in / Join** explains setup when Supabase is unconfigured. With valid public configuration, it opens email/password login, signup and password recovery. Signed-in users use the database event directory and transactional registration APIs; logging out returns to the separate demo.
+**Log in / Join** opens email/password login, signup and password recovery. Signed-in users use the database event directory and transactional registration APIs. Logging out returns to public discovery without displaying personal profile or registration data. Missing configuration shows a service-unavailable message and never substitutes sample content.
 
 ## Event permissions
 
@@ -69,7 +67,7 @@ The application has been connected and its authentication flows checked against 
    VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_PUBLISHABLE_OR_ANON_KEY
    ```
 
-   Use a public publishable (`sb_publishable_…`) or legacy **anon** key. Secret/service-role keys do not belong in browser variables. Invalid/placeholder/server-only configuration keeps the demo available.
+   Use a public publishable (`sb_publishable_…`) or legacy **anon** key. Secret/service-role keys do not belong in browser variables. Invalid/placeholder/server-only configuration disables account and event services.
 
 4. Set your local origin in Supabase’s authentication Site URL and redirect allowlist. Password recovery redirects to `http://localhost:5173/?recovery=1`; use your actual origin if Vite selects another port. Enable email/password authentication and email confirmation. Configure real email delivery before launch.
 5. Restart Vite, choose **Log in / Join**, and register a real account. New accounts are ordinary members. Sign up a second account to test instant RSVPs and organiser attendee lists.
@@ -100,8 +98,7 @@ Oh Sakhi/
 │   ├── features/admin/           # Protected API boundary, moderation forms and record lists
 │   ├── features/account/         # Deliberate account deletion and retry UI
 │   ├── hooks/                    # Auth/session and member-data loading
-│   ├── lib/                      # Supabase client, API boundary, config and demo store
-│   ├── data/                     # Original preview’s six sample events
+│   ├── lib/                      # Supabase client, API boundary, configuration
 │   ├── styles/                   # Preserved visual design and responsive styles
 │   └── main.tsx                  # React entry point
 ├── supabase/migrations/          # Original migrations plus additive improvements
@@ -125,7 +122,7 @@ The retired vanilla JavaScript entry points were backed up outside the project a
 ```bash
 npm run check       # Strict TypeScript for app/tests plus ESLint
 npm run check:functions # Deno type checking for the Edge Function
-npm test            # Demo persistence, capacity and configuration
+npm test            # Event status, capacity and configuration
 npm run test:db     # Real temporary PostgreSQL: RLS, migrations, history and races
 npm run test:e2e    # Chrome: desktop/mobile, auth fixtures and design comparison
 npm run build      # Type checks and production output in dist/

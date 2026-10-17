@@ -1,5 +1,8 @@
 # Stage B member profiles
 
+> Update: browser demo mode has been removed. Signed-out visitors now browse published Supabase events and sign in for account actions. Demo references below describe earlier-stage behavior and verification.
+
+
 The member profile editor uses the existing Supabase schema and private Storage bucket. This change adds no migrations. Keep the six applied migrations unchanged.
 
 ## Member experience

@@ -24,29 +24,18 @@ export interface CommunityEvent {
   host: string;
   emoji: string;
   colors: [string, string];
-  attendees: number;
-  approved: string[];
-  pending: string[];
-  declined?: string[];
+  is_host: boolean;
   host_id?: string;
   status?: EventStatus;
   starts_at?: string;
   registration_deadline?: string;
-  approved_total?: number;
+  approved_total: number;
   details_updated_at?: string;
   timezone?: string;
   ends_at?: string | null;
   cover_path?: string | null;
   host_label?: string;
   request_status?: RequestStatus;
-}
-export interface DemoState {
-  profile: Profile;
-  events: CommunityEvent[];
-}
-export interface StorageLike {
-  getItem?(key: string): string | null | undefined;
-  setItem?(key: string, value: string): unknown;
 }
 export interface Registration {
   user_id: string;

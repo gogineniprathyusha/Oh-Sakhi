@@ -1,5 +1,8 @@
 # Stage E — Launch preparation
 
+> Update: browser demo mode has been removed. Signed-out visitors now browse published Supabase events and sign in for account actions. Demo references below describe earlier-stage behavior and verification.
+
+
 This stage prepares the existing application for launch. It does not publish a website, purchase a domain/service or certify legal compliance. Event emails remain Stage F; community growth remains Stage G.
 
 ## Product and accessibility

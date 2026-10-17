@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { eventInstant, localDateTime } from "../../src/features/events/time.ts";
 import { availability, canRequest } from "../../src/features/events/utils.ts";
-import { initialState } from "../../src/lib/demo-store.ts";
+import { eventFixture } from "./fixtures/event.ts";
 test("Richmond event times resolve winter and summer offsets without the browser timezone", () => {
   assert.equal(eventInstant("2026-12-12T10:30"), "2026-12-12T15:30:00.000Z");
   assert.equal(eventInstant("2026-07-12T10:30"), "2026-07-12T14:30:00.000Z");
@@ -16,7 +16,7 @@ test("DST gaps, repeated times and impossible dates are rejected", () => {
 });
 test("availability distinguishes full, deadline-closed, in-progress and past events", () => {
   const event = {
-    ...initialState().events[0],
+    ...eventFixture(),
     status: "published" as const,
     starts_at: "2030-07-17T14:30:00Z",
     registration_deadline: "2030-07-16T21:00:00Z",
@@ -46,5 +46,5 @@ test("availability distinguishes full, deadline-closed, in-progress and past eve
     availability(event, Date.parse("2030-07-17T17:00:00Z")),
     "Past event",
   );
-  assert.equal(canRequest({ ...event, status: "cancelled" }, false), false);
+  assert.equal(canRequest({ ...event, status: "cancelled" }), false);
 });

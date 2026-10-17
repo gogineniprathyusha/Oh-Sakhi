@@ -1,5 +1,8 @@
 # Stage B authentication verification
 
+> Update: browser demo mode has been removed. Signed-out visitors now browse published Supabase events and sign in for account actions. Demo references below describe earlier-stage behavior and verification.
+
+
 Verified on October 17, 2026. The application uses the existing Supabase project configuration in ignored `.env.local`. No credentials, session tokens or test passwords are included in this report or committed files.
 
 ## Hosted project results

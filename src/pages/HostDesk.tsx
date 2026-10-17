@@ -10,7 +10,7 @@ export function HostDesk({
   open: (id: string) => void;
   create: () => void;
 }) {
-  const hosted = events.filter((event) => event.host === "You");
+  const hosted = events.filter((event) => event.is_host);
   return (
     <div className="content">
       <span className="eyebrow">YOUR HOSTING SPACE</span>

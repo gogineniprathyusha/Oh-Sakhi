@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { categories, today } from "../lib/demo-store.ts";
+import { categories, today } from "../features/events/catalog.ts";
 import type { EventInput, CommunityEvent } from "../features/events/types.ts";
 import {
   deadlineLabel,
@@ -9,12 +9,10 @@ import {
 } from "../features/events/time.ts";
 export function EventForm({
   event,
-  demo,
   busy,
   save,
 }: {
   event?: CommunityEvent;
-  demo: boolean;
   busy: boolean;
   save: (input: EventInput) => void;
 }) {
@@ -67,9 +65,7 @@ export function EventForm({
       );
       return;
     }
-    const confirmed =
-      event?.approved_total ??
-      (event?.attendees ?? 0) + (event?.approved.length ?? 0);
+    const confirmed = event?.approved_total ?? 0;
     if (
       input.title.length < 3 ||
       !input.host_label ||
@@ -91,12 +87,6 @@ export function EventForm({
       <p className="section-intro">
         Bring women together around something you love.
       </p>
-      {demo && (
-        <p className="small muted">
-          Demo only. Changes stay in this browser. Real profiles, hosting and
-          RSVPs require Supabase and a signed-in account.
-        </p>
-      )}
       <form onSubmit={submit}>
         <div className="field">
           <label htmlFor="ev-title">Plan name</label>
@@ -255,7 +245,7 @@ export function EventForm({
             {deadlineLabel(event.registration_deadline, event.timezone)}
           </p>
         )}
-        {!demo && !event && (
+        {!event && (
           <p className="small muted">
             You can add a cover image after saving, from Edit plan.
           </p>
@@ -267,13 +257,7 @@ export function EventForm({
             value="published"
             disabled={busy}
           >
-            {busy
-              ? "Saving…"
-              : event
-                ? "Save changes"
-                : demo
-                  ? "Save demo plan"
-                  : "Publish event"}
+            {busy ? "Saving…" : event ? "Save changes" : "Publish event"}
           </button>
           {!event && (
             <button

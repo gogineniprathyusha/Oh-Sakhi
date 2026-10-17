@@ -1,12 +1,19 @@
 import type { CommunityEvent } from "./types.ts";
-import { canRequest, dateLabel, isClosed, timeLabel } from "./utils.ts";
-import { seats, status } from "../../lib/demo-store.ts";
+import {
+  canRequest,
+  dateLabel,
+  isClosed,
+  timeLabel,
+  seats,
+  status,
+  availability,
+} from "./utils.ts";
 import { EventArtwork } from "./EventArtwork.tsx";
 import { deadlineLabel } from "./time.ts";
-import { availability } from "./utils.ts";
 interface Props {
   event: CommunityEvent;
-  demo: boolean;
+  signedIn: boolean;
+  login: () => void;
   busy: boolean;
   isAdmin: boolean;
   isOrganizer: boolean;
@@ -22,7 +29,8 @@ interface Props {
 }
 export function EventDetails({
   event: current,
-  demo,
+  signedIn,
+  login,
   busy,
   isAdmin,
   isOrganizer,
@@ -48,36 +56,24 @@ export function EventDetails({
           👥 {seats(current)} of {current.capacity} spots left
         </span>
       </div>
-      {!demo && (
-        <p className="small muted">
-          {availability(current)} · {current.timezone ?? "America/New_York"}{" "}
-          (Richmond)
-          {current.ends_at && (
-            <> · Ends {deadlineLabel(current.ends_at, current.timezone)}</>
-          )}
-          {current.registration_deadline && (
-            <>
-              <br />
-              RSVP by{" "}
-              {deadlineLabel(current.registration_deadline, current.timezone)}.
-              RSVPs are confirmed immediately while seats are available.
-            </>
-          )}
-        </p>
-      )}
-      <p className="detail-description">{current.description}</p>
-      <div className="detail-note">
-        <strong>
-          Hosted by {current.host}
-          {demo ? " · Sample meetup" : ""}
-        </strong>
-        {demo && (
+      <p className="small muted">
+        {availability(current)} · {current.timezone ?? "America/New_York"}{" "}
+        (Richmond)
+        {current.ends_at && (
+          <> · Ends {deadlineLabel(current.ends_at, current.timezone)}</>
+        )}
+        {current.registration_deadline && (
           <>
             <br />
-            Demo only. Changes stay in this browser. No real event or booking is
-            created.
+            RSVP by{" "}
+            {deadlineLabel(current.registration_deadline, current.timezone)}.
+            RSVPs are confirmed immediately while seats are available.
           </>
         )}
+      </p>
+      <p className="detail-description">{current.description}</p>
+      <div className="detail-note">
+        <strong>Hosted by {isOrganizer ? "You" : current.host}</strong>
       </div>
       {current.details_updated_at && (
         <p className="small muted">
@@ -90,7 +86,7 @@ export function EventDetails({
           This event was removed for a community violation. It cannot be
           republished.
         </p>
-      ) : isClosed(current, demo) ? (
+      ) : isClosed(current) ? (
         <p role="status">
           This plan is{" "}
           {current.status === "cancelled"
@@ -102,7 +98,11 @@ export function EventDetails({
         </p>
       ) : null}
       <div className="detail-actions">
-        {isOrganizer ? (
+        {!signedIn ? (
+          <button className="btn" onClick={login}>
+            Log in to RSVP
+          </button>
+        ) : isOrganizer ? (
           <>
             <button className="btn" onClick={manage}>
               View attendees
@@ -117,23 +117,19 @@ export function EventDetails({
                   disabled={busy}
                   onClick={() => cancel(current)}
                 >
-                  {demo ? "Cancel this demo plan" : "Cancel event"}
+                  Cancel event
                 </button>
               </>
             )}
             {current.status === "draft" && (
               <button className="btn" disabled={busy} onClick={publish}>
-                {demo ? "Publish demo plan" : "Publish event"}
+                Publish event
               </button>
             )}
           </>
         ) : status(current) === "going" ? (
           <>
-            <p role="status">
-              {demo
-                ? "Your demo spot is confirmed. No real booking was made."
-                : "Your spot is confirmed."}
-            </p>
+            <p role="status">Your spot is confirmed.</p>
             <button
               className="btn btn-outline"
               disabled={busy}
@@ -145,19 +141,17 @@ export function EventDetails({
         ) : (
           <button
             className="btn"
-            disabled={
-              busy || !canRequest(current, demo) || seats(current) === 0
-            }
+            disabled={busy || !canRequest(current) || seats(current) === 0}
             onClick={() => request(current)}
           >
-            {!canRequest(current, demo)
+            {!canRequest(current)
               ? "RSVPs closed"
               : seats(current) === 0
                 ? "This plan is full"
                 : "RSVP →"}
           </button>
         )}
-        {current.request_status === "cancelled" && !isClosed(current, demo) && (
+        {current.request_status === "cancelled" && !isClosed(current) && (
           <p className="small muted">
             Your previous RSVP is not active. You can RSVP again while
             registration is open.
@@ -166,12 +160,12 @@ export function EventDetails({
         <button className="btn btn-light" onClick={close}>
           Back to plans
         </button>
-        {!demo && !isOrganizer && current.status !== "removed" && (
+        {signedIn && !isOrganizer && current.status !== "removed" && (
           <button className="link-btn" onClick={report}>
             Report this event
           </button>
         )}
-        {!demo && isAdmin && current.status !== "removed" && (
+        {signedIn && isAdmin && current.status !== "removed" && (
           <button className="link-btn" onClick={moderate}>
             Remove for a violation
           </button>

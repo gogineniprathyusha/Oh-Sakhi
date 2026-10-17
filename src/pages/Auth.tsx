@@ -119,7 +119,7 @@ export function Auth({
       <main className="auth-panel">
         <div className="auth-card">
           <button className="link-btn auth-back" onClick={back} disabled={busy}>
-            ← Explore the demo
+            ← Back to experiences
           </button>
           <br />
           <span className="eyebrow">YOUR NEXT CHAPTER STARTS HERE</span>
