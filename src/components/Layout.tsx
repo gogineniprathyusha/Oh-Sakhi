@@ -1,9 +1,11 @@
+import { Avatar } from "./Avatar.tsx";
 import type { ReactNode } from "react";
 import type { Page } from "../features/events/types.ts";
 interface Props {
   demo: boolean;
   page: Page;
   name: string;
+  photoUrl?: string;
   navigate: (page: Page) => void;
   create: () => void;
   login: () => void;
@@ -21,6 +23,7 @@ export function Layout({
   demo,
   page,
   name,
+  photoUrl,
   navigate,
   create,
   login,
@@ -93,13 +96,12 @@ export function Layout({
             </a>
             <span className="top-location">📍 Richmond, VA</span>
             <div className="top-actions">
-              <span
-                className="avatar"
+              <Avatar
+                name={name}
+                url={photoUrl}
                 id="top-avatar"
-                aria-label={demo ? "Demo profile" : "My profile"}
-              >
-                {name.trim().charAt(0).toUpperCase() || "S"}
-              </span>
+                label={demo ? "Demo profile" : "My profile"}
+              />
               <button
                 className="btn btn-small"
                 id="header-create"

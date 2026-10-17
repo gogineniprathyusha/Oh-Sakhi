@@ -9,6 +9,7 @@ export interface Profile {
   interests: string[];
   city?: string;
   neighborhood?: string;
+  avatar_path?: string | null;
 }
 export interface CommunityEvent {
   id: string;
@@ -81,4 +82,5 @@ export interface ProfileRow {
   interests: string[];
   city: string;
   neighborhood: string;
+  avatar_path?: string | null;
 }

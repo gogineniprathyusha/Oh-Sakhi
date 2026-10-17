@@ -77,6 +77,7 @@ export async function loadCommunity(userId: string) {
       interests: member.interests,
       city: member.city,
       neighborhood: member.neighborhood,
+      avatar_path: member.avatar_path ?? null,
     } satisfies Profile,
     events: mapped,
     isAdmin: Boolean(access.data?.is_admin),
@@ -92,8 +93,13 @@ export async function saveProfile(id: string, profile: Profile) {
       city: profile.city ?? "Richmond",
       neighborhood: profile.neighborhood ?? "",
     })
-    .eq("id", id);
-  check(error);
+    .eq("id", id)
+    .select("id")
+    .single();
+  if (error)
+    throw Error(
+      "Your profile could not be saved. Please check your connection and try again.",
+    );
 }
 export async function saveEvent(
   id: string | undefined,
