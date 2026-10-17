@@ -185,6 +185,13 @@ export async function attendees(id: string): Promise<Registration[]> {
   check(error);
   return data ?? [];
 }
+export async function exportAttendees(id: string): Promise<Registration[]> {
+  const { data, error } = await client().rpc("export_meetup_attendees", {
+    p_meetup_id: id,
+  });
+  check(error);
+  return data ?? [];
+}
 export async function reportEvent(
   id: string,
   userId: string,

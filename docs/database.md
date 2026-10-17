@@ -17,8 +17,9 @@ Apply files in filename order, once each. Do not edit migrations that have alrea
 | `202610170005_event_images.sql`                    | Service-only cover commits and restrictions that require server image validation                                  |
 | `202610170006_instant_rsvps.sql`                   | Immediate member reservations, retired approval API and safe legacy queue conversion                              |
 | `202610170007_rsvp_counter_fix.sql`                | Separate insert/update reservation paths and reconcile mismatched counters                                        |
+| `202610170008_admin_dashboard.sql`                 | Bounded administrator reads, recorded report/access decisions, audit access and authorised attendee exports       |
 
-The historical foundation required administrator publication. **The organiser-workflow migration replaces that policy.** Apply all nine files for the current application and deploy the `event-image` function for covers. The frontend reads `meetup_directory` and uses registration RPCs; it does not write registration rows directly. Existing manual SQL Editor installations should apply only outstanding files.
+The historical foundation required administrator publication. **The organiser-workflow migration replaces that policy.** Apply all ten files for the current application and deploy the `event-image` function for covers. The frontend reads `meetup_directory` and uses registration RPCs; it does not write registration rows directly. Existing manual SQL Editor installations should apply only outstanding files.
 
 The first foundation migration classifies legacy events as drafts because they previously had no publication status. Their registrations are preserved. The organiser-workflow migration keeps those drafts private to avoid unexpectedly publishing unfinished content. Their organiser can publish them directly, with no admin review. Newly created events default to `published`.
 
@@ -49,18 +50,27 @@ Capacity is protected by transactions, locks on the event row, a maintained appr
 
 Use the current authenticated session. Arguments are named exactly as shown:
 
-| API                       | Arguments                                      | Access                                                           |
-| ------------------------- | ---------------------------------------------- | ---------------------------------------------------------------- |
-| `request_meetup`          | `p_meetup_id`                                  | Active member, immediate confirmed seat before deadline/start    |
-| `withdraw_meetup_request` | `p_meetup_id`                                  | Own confirmed RSVP                                               |
-| `set_meetup_status`       | `p_meetup_id`, `p_status`                      | Event organiser; draft/published/cancelled/completed transitions |
-| `moderate_meetup`         | `p_meetup_id`, `p_reason` (10–1000 characters) | Active administrator                                             |
-| `get_meetup_attendees`    | `p_meetup_id`                                  | Organiser/admin; minimal display name and request state          |
-| `get_my_access`           | None                                           | Current member’s status and trusted admin flag                   |
-| `set_member_interests`    | `p_interest_ids`                               | Current active member                                            |
-| `set_member_access`       | `p_user_id`, `p_status`, `p_reason`            | Administrator                                                    |
-| `review_report`           | `p_report_id`, `p_status`, `p_note`            | Administrator                                                    |
-| `admin_statistics`        | None                                           | Administrator                                                    |
+| API                       | Arguments                                      | Access                                                            |
+| ------------------------- | ---------------------------------------------- | ----------------------------------------------------------------- |
+| `request_meetup`          | `p_meetup_id`                                  | Active member, immediate confirmed seat before deadline/start     |
+| `withdraw_meetup_request` | `p_meetup_id`                                  | Own confirmed RSVP                                                |
+| `set_meetup_status`       | `p_meetup_id`, `p_status`                      | Event organiser; draft/published/cancelled/completed transitions  |
+| `moderate_meetup`         | `p_meetup_id`, `p_reason` (10–1000 characters) | Active administrator                                              |
+| `get_meetup_attendees`    | `p_meetup_id`                                  | Organiser/admin; minimal display name and request state           |
+| `get_my_access`           | None                                           | Current member’s status and trusted admin flag                    |
+| `set_member_interests`    | `p_interest_ids`                               | Current active member                                             |
+| `set_member_access`       | `p_user_id`, `p_status`, `p_reason`            | Administrator                                                     |
+| `review_report`           | `p_report_id`, `p_status`, `p_note`            | Administrator                                                     |
+| `admin_statistics`        | None                                           | Administrator                                                     |
+| `admin_list_members`      | `p_status`, `p_search`, `p_offset`, `p_limit`  | Active administrator; names, IDs, city, role/access and reasons   |
+| `admin_list_reports`      | `p_status`, `p_search`, `p_offset`, `p_limit`  | Active administrator; private reports and review state            |
+| `admin_list_events`       | `p_status`, `p_search`, `p_offset`, `p_limit`  | Active administrator; event status, organiser access and capacity |
+| `admin_list_audit`        | `p_offset`, `p_limit`                          | Active administrator; recorded actions and reasons                |
+| `export_meetup_attendees` | `p_meetup_id`                                  | Active organiser/admin; minimal attendee data and audited export  |
+
+Stage D list RPCs return `{items,total}`, validate pagination (1–100 rows, nonnegative offset up to 1,000,000), and use literal name/title substring searches or exact IDs. No Auth email addresses, profile bios or photos are returned. The UI uses 20-row pages. Private tables retain RLS and no browser grants.
+
+Access changes require a 10–500 character reason. Administrator targets must be managed through trusted SQL; the dashboard cannot promote users or suspend administrators. Suspension blocks member features and hides an organiser's events from public discovery without altering their existing registrations. Restoring access re-enables eligible published events. Report resolution/dismissal requires a 10–1000 character review note; event removal and report closure remain separate recorded decisions. Exports are limited to 30 per member per hour and contain member ID, display name, RSVP state and registration time. See [stage-d-admin.md](stage-d-admin.md).
 
 Own profile updates, event content updates/inserts, and report submissions use constrained table operations under RLS. `src/lib/community-api.ts` handles community data; `src/features/profile/profile-api.ts` handles the interest catalog and private profile photos. Event cover changes invoke the `event-image` function. Its `authorize_event_image(p_actor,p_event)` and `commit_event_image(p_actor,p_event,p_previous,p_path)` RPCs are executable only by `service_role`, after the endpoint verifies the caller. UI role flags control which buttons appear; PostgreSQL grants, RLS and RPC checks enforce access.
 

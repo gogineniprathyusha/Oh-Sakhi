@@ -56,6 +56,7 @@ The application has been connected and its authentication flows checked against 
    supabase/migrations/202610170005_event_images.sql
    supabase/migrations/202610170006_instant_rsvps.sql
    supabase/migrations/202610170007_rsvp_counter_fix.sql
+   supabase/migrations/202610170008_admin_dashboard.sql
    ```
 
    If some migrations are already applied, run only the outstanding ones. The organiser-workflow migration supersedes the earlier admin-publication rules. Previously saved drafts remain private and can be published directly by their organiser; existing registrations are retained. The Stage C image migration requires the `event-image` function for cover changes; follow [its deployment order](docs/stage-c-events.md).
@@ -70,7 +71,7 @@ The application has been connected and its authentication flows checked against 
    Use a public publishable (`sb_publishable_…`) or legacy **anon** key. Secret/service-role keys do not belong in browser variables. Invalid/placeholder/server-only configuration keeps the demo available.
 
 4. Set your local origin in Supabase’s authentication Site URL and redirect allowlist. Password recovery redirects to `http://localhost:5173/?recovery=1`; use your actual origin if Vite selects another port. Enable email/password authentication and email confirmation. Configure real email delivery before launch.
-5. Restart Vite, choose **Log in / Join**, and register a real account. New accounts are ordinary members. Sign up a second account to test join requests and organiser decisions.
+5. Restart Vite, choose **Log in / Join**, and register a real account. New accounts are ordinary members. Sign up a second account to test instant RSVPs and organiser attendee lists.
 6. To designate your initial administrator, use the trusted SQL Editor after that account exists:
 
    ```sql
@@ -81,6 +82,8 @@ The application has been connected and its authentication flows checked against 
 
    Do not grant roles through signup metadata. Keep `private` out of exposed API schemas.
 
+7. With an active administrator account, use **Refresh plans** or sign in again to reveal **Admin** in desktop/mobile navigation. The dashboard provides statistics, report review, member suspension/restoration, event moderation, attendee exports and audit history. Organisers also have CSV export under **View attendees**. Follow [Stage D administration](docs/stage-d-admin.md) for setup, access semantics and verification.
+
 ## Source layout
 
 ```text
@@ -88,9 +91,10 @@ Oh Sakhi/
 ├── src/
 │   ├── app/App.tsx                # Session, navigation and action coordination
 │   ├── components/               # Shared layout, cards, accessible modal and forms
-│   ├── pages/                    # Discover, My plans, Host desk, Circle, Profile, Auth
+│   ├── pages/                    # Discover, My plans, Host desk, Circle, Profile, Auth, Admin
 │   ├── features/events/          # Event types, details, request manager and date rules
 │   ├── features/profile/         # Interest choices, image preparation and private photo API
+│   ├── features/admin/           # Protected API boundary, moderation forms and record lists
 │   ├── hooks/                    # Auth/session and member-data loading
 │   ├── lib/                      # Supabase client, API boundary, config and demo store
 │   ├── data/                     # Original preview’s six sample events
@@ -132,6 +136,8 @@ Hosted signup, email confirmation, login, profile persistence and logout have be
 
 Stage C adds cover upload/replacement/removal, deadlines, end times, public organiser names, drafts and clearer availability/history. Organisers publish immediately; member RSVPs confirm automatically within capacity. See [docs/stage-c-events.md](docs/stage-c-events.md) for the server upload boundary, the new migration, deployment steps and verification results.
 
-Basic event reporting and administrator removal are connected to the database APIs. A full admin dashboard, report-review/member-access screens, CSV export, legal/contact pages and account deletion are still pending. My circle clearly explains that connection requests and private messaging are not implemented. No notifications or real messages are simulated.
+Stage D provides the protected admin dashboard, report review, member access controls, event moderation, statistics, CSV exports and audit history. Details are in [docs/stage-d-admin.md](docs/stage-d-admin.md). My circle clearly explains that connection requests and private messaging are not implemented. No notifications or real messages are simulated.
+
+The agreed remaining stages are **E — launch readiness** (legal/contact pages, account deletion, final checks and deployment preparation), **F — event emails** (RSVP confirmations, changes, cancellations and reminders), and **G — community growth** (waitlists, improved discovery, announcements/preferences and member feedback). Public deployment requires the project owner's approval.
 
 For later Vercel hosting, use the Vite preset, `npm run build`, and output directory `dist`. Set the public environment variables in the hosting project and update Supabase’s auth URLs to the deployed origin. No public deployment has been performed.

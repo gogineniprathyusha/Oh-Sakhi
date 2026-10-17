@@ -1,0 +1,99 @@
+.admin-tabs {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin: 24px 0;
+}
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 16px;
+  margin: 24px 0;
+}
+.admin-toolbar form {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+.admin-toolbar .field {
+  margin: 0;
+  flex: 1;
+  min-width: 150px;
+}
+.admin-toolbar .field:nth-child(2) {
+  flex: 2;
+}
+.admin-records .heading-row {
+  margin: 0;
+  align-items: start;
+}
+.admin-records h2,
+.admin-action h2,
+.admin-content .box h2 {
+  font: 500 24px "Playfair Display";
+  margin: 0 0 12px;
+  color: var(--plum);
+}
+.admin-records .box {
+  overflow-wrap: anywhere;
+}
+.admin-records p,
+.admin-action p {
+  line-height: 1.7;
+}
+.admin-action {
+  border-color: var(--dust);
+}
+.admin-action h2:focus {
+  outline: 2px solid var(--dust);
+  outline-offset: 5px;
+}
+.admin-audit-details div {
+  display: grid;
+  grid-template-columns: minmax(80px, 120px) 1fr;
+  gap: 12px;
+  padding: 7px 0;
+}
+.admin-audit-details dt {
+  color: var(--muted);
+}
+.admin-audit-details dd {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.attendee-export {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px 0;
+}
+.attendee-export label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.attendee-export p {
+  flex-basis: 100%;
+  margin: 0;
+}
+.attendee-export input {
+  accent-color: var(--wine);
+}
+@media (max-width: 750px) {
+  .admin-toolbar {
+    align-items: stretch;
+  }
+  .admin-toolbar form {
+    flex-basis: 100%;
+  }
+  .admin-toolbar .field {
+    flex-basis: 100%;
+  }
+  .mobile-nav:has([data-page="admin"]) small {
+    font-size: 9px;
+  }
+}

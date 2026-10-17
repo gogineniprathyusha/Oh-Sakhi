@@ -1,6 +1,7 @@
 import type { CommunityEvent, Registration } from "./types.ts";
 import { isClosed } from "./utils.ts";
 import { seats } from "../../lib/demo-store.ts";
+import { AttendeeExport } from "./AttendeeExport.tsx";
 interface Props {
   event: CommunityEvent;
   demo: boolean;
@@ -31,6 +32,7 @@ export function RequestManager({
         cancel their own RSVP to release a seat.
       </p>
       {attendeeError && <p role="alert">{attendeeError}</p>}
+      {!demo && <AttendeeExport eventId={current.id} />}
       {!rows.length && <p>No RSVPs yet.</p>}
       {rows.map((row) => (
         <div className="request-row" key={row.user_id}>
