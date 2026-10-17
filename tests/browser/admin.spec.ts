@@ -8,7 +8,7 @@ const navigate = async (page: import("@playwright/test").Page) => {
     page.getByRole("heading", { name: "Admin dashboard", exact: true }),
   ).toBeVisible();
 };
-test("demo and ordinary members never see administrator navigation or load admin data", async ({
+test("guests and ordinary members never see administrator navigation or load admin data", async ({
   page,
 }) => {
   await page.goto("/");

@@ -1,5 +1,5 @@
 import { supabase } from "./supabase.ts";
-import { themes } from "./demo-store.ts";
+import { themes } from "../features/events/catalog.ts";
 import type {
   CommunityEvent,
   EventInput,
@@ -19,6 +19,53 @@ function client() {
 function check(error: { message: string } | null) {
   if (error) throw Error(error.message);
 }
+function mapEvent(
+  row: MeetupRow,
+  userId?: string,
+  registrations: RequestRow[] = [],
+): CommunityEvent {
+  const [emoji, ...colors] = themes[row.category] ?? themes.Social;
+  return {
+    id: row.id,
+    title: row.title,
+    category: row.category,
+    date: row.event_date,
+    time: row.event_time.slice(0, 5),
+    place: row.place,
+    capacity: row.capacity,
+    description: row.description,
+    host_id: row.host_id,
+    host: row.host_name,
+    is_host: Boolean(userId && row.host_id === userId),
+    emoji,
+    colors,
+    approved_total: row.approved_count,
+    status: row.status,
+    starts_at: row.starts_at,
+    registration_deadline: row.registration_deadline,
+    details_updated_at: row.details_updated_at,
+    cover_path: row.cover_path,
+    timezone: row.timezone ?? "America/New_York",
+    ends_at: row.ends_at,
+    host_label: row.host_label,
+    request_status: registrations.find(
+      (r) => r.meetup_id === row.id && r.user_id === userId,
+    )?.status,
+  };
+}
+
+export async function loadPublicEvents() {
+  // The security-invoker view and existing RLS expose only eligible public events.
+  const { data, error } = await client()
+    .from("meetup_directory")
+    .select("*")
+    .eq("status", "published")
+    .gt("starts_at", new Date().toISOString())
+    .order("starts_at");
+  check(error);
+  return ((data ?? []) as MeetupRow[]).map((row) => mapEvent(row));
+}
+
 export async function loadCommunity(userId: string) {
   const db = client();
   const [profile, events, requests, access] = await Promise.all([
@@ -33,47 +80,8 @@ export async function loadCommunity(userId: string) {
   for (const result of [profile, events, requests]) check(result.error);
   const member = profile.data as ProfileRow;
   const registrations = (requests.data ?? []) as RequestRow[];
-  const mapped: CommunityEvent[] = ((events.data ?? []) as MeetupRow[]).map(
-    (row) => {
-      const [emoji, ...colors] = themes[row.category] ?? themes.Social;
-      const own = registrations.filter(
-        (request) => request.meetup_id === row.id,
-      );
-      return {
-        id: row.id,
-        title: row.title,
-        category: row.category,
-        date: row.event_date,
-        time: row.event_time.slice(0, 5),
-        place: row.place,
-        capacity: row.capacity,
-        description: row.description,
-        host_id: row.host_id,
-        host: row.host_id === userId ? "You" : row.host_name,
-        emoji,
-        colors,
-        attendees: row.approved_count,
-        approved: own
-          .filter((r) => r.user_id === userId && r.status === "approved")
-          .map(() => "demo"),
-        pending: own
-          .filter((r) => r.user_id === userId && r.status === "pending")
-          .map(() => "demo"),
-        declined: own
-          .filter((r) => r.user_id === userId && r.status === "declined")
-          .map(() => "demo"),
-        status: row.status,
-        starts_at: row.starts_at,
-        registration_deadline: row.registration_deadline,
-        approved_total: row.approved_count,
-        details_updated_at: row.details_updated_at,
-        cover_path: row.cover_path,
-        timezone: row.timezone ?? "America/New_York",
-        ends_at: row.ends_at,
-        host_label: row.host_label,
-        request_status: own.find((r) => r.user_id === userId)?.status,
-      };
-    },
+  const mapped = ((events.data ?? []) as MeetupRow[]).map((row) =>
+    mapEvent(row, userId, registrations),
   );
   return {
     profile: {

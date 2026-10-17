@@ -1,7 +1,7 @@
 import { StrictMode, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles/base.css";
-import "./styles/demo.css";
+import "./styles/community.css";
 import "./styles/admin.css";
 import "./styles/launch.css";
 import { informationPage } from "./lib/information.ts";

@@ -3,7 +3,7 @@ import { LegalLinks } from "./LegalLinks.tsx";
 import type { ReactNode } from "react";
 import type { Page } from "../features/events/types.ts";
 interface Props {
-  demo: boolean;
+  signedIn: boolean;
   isAdmin?: boolean;
   page: Page;
   name: string;
@@ -23,7 +23,7 @@ const items: [Page, string, string][] = [
   ["admin", "⚑", "Admin"],
 ];
 export function Layout({
-  demo,
+  signedIn,
   isAdmin = false,
   page,
   name,
@@ -36,10 +36,7 @@ export function Layout({
 }: Props) {
   const navigation = (mobile = false) =>
     items
-      .filter(
-        ([key]) =>
-          (!demo || key !== "host") && (key !== "admin" || (!demo && isAdmin)),
-      )
+      .filter(([key]) => key !== "admin" || (signedIn && isAdmin))
       .map(([key, icon, label]) => (
         <button
           key={key}
@@ -68,15 +65,6 @@ export function Layout({
       <a className="skip-link" href="#view" inert={modalOpen}>
         Skip to content
       </a>
-      {demo && (
-        <div className="demo-banner" role="status" inert={modalOpen}>
-          ✳ DEMO MODE — sample meetups only; changes stay in this browser. No
-          real accounts or bookings.{" "}
-          <button className="demo-login" onClick={login}>
-            Log in / Join
-          </button>
-        </div>
-      )}
       <div className="app-shell" inert={modalOpen}>
         <aside className="sidebar">
           <a className="brand" href="#discover" onClick={home}>
@@ -106,12 +94,18 @@ export function Layout({
             </a>
             <span className="top-location">📍 Richmond, VA</span>
             <div className="top-actions">
-              <Avatar
-                name={name}
-                url={photoUrl}
-                id="top-avatar"
-                label={demo ? "Demo profile" : "My profile"}
-              />
+              {signedIn ? (
+                <Avatar
+                  name={name}
+                  url={photoUrl}
+                  id="top-avatar"
+                  label="My profile"
+                />
+              ) : (
+                <button className="link-btn" onClick={login}>
+                  Log in / Join
+                </button>
+              )}
               <button
                 className="btn btn-small"
                 id="header-create"

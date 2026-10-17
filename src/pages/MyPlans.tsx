@@ -1,17 +1,15 @@
 import type { CommunityEvent } from "../features/events/types.ts";
-import { status } from "../lib/demo-store.ts";
+import { status } from "../features/events/utils.ts";
 import { EventCard } from "../components/EventCard.tsx";
 import { Empty } from "../components/Empty.tsx";
 export function MyPlans({
   events,
   open,
   explore,
-  demo,
 }: {
   events: CommunityEvent[];
   open: (id: string) => void;
   explore: () => void;
-  demo: boolean;
 }) {
   const plans = events
     .filter(
@@ -26,11 +24,6 @@ export function MyPlans({
       <p className="section-intro">
         Your upcoming experiences and RSVP history in one place.
       </p>
-      {demo && (
-        <p className="small muted">
-          This is your demo itinerary. No real spots are reserved.
-        </p>
-      )}
       <div className="statrow">
         {[
           ["going", "Going"],

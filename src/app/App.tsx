@@ -27,25 +27,16 @@ import { useLiveCommunity } from "../hooks/useLiveCommunity.ts";
 import { authCallback, supabase } from "../lib/supabase.ts";
 import { withoutAuthCallback } from "../lib/auth-callback.ts";
 import * as api from "../lib/community-api.ts";
-import {
-  initialState,
-  loadState,
-  requestToJoin,
-  saveState,
-  themes,
-  withdraw,
-} from "../lib/demo-store.ts";
+import { usePublicEvents } from "../hooks/usePublicEvents.ts";
 import { EventDetails } from "../features/events/EventDetails.tsx";
 import { RequestManager } from "../features/events/RequestManager.tsx";
 import type {
   AuthMode,
   CommunityEvent,
-  DemoState,
   EventInput,
   Page,
   Profile as MemberProfile,
   Registration,
-  StorageLike,
 } from "../features/events/types.ts";
 
 const Profile = lazy(() =>
@@ -70,21 +61,12 @@ const CoverEditor = lazy(() =>
 type Dialog =
   | { kind: "details" | "manage" | "edit" | "report" | "moderate"; id: string }
   | { kind: "create" | "setup" };
-function browserStorage(): StorageLike | undefined {
-  try {
-    return localStorage;
-  } catch {
-    return undefined;
-  }
-}
-
 export function App() {
   const [, tick] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => tick((value) => value + 1), 30000);
     return () => clearInterval(timer);
   }, []);
-  const [demoState, setDemoState] = useState(() => loadState(browserStorage()));
   const [page, setPage] = useState<Page>("discover"),
     [filter, setFilter] = useState("All");
   const [auth, setAuth] = useState<AuthMode | null>(() =>
@@ -101,9 +83,12 @@ export function App() {
   const onRecovery = useCallback(() => setAuth("update"), []);
   const session = useSession(onRecovery),
     user = session.user,
-    live = useLiveCommunity(user?.id),
-    demo = !user;
-  const data = demo ? demoState : live.data;
+    live = useLiveCommunity(user?.id);
+  const publicEvents = usePublicEvents(
+    !user && !session.loading && !auth && !session.error,
+  );
+  const data = live.data;
+  const events = user ? (data?.events ?? []) : publicEvents.events;
   const photo = useProfilePhoto(user?.id, live.data?.profile.avatar_path);
   const [photoCleanup, setPhotoCleanup] = useState<{
     userId: string;
@@ -116,9 +101,6 @@ export function App() {
   }, []);
   useEffect(() => () => clearTimeout(timer.current), []);
   useEffect(() => {
-    document.body.dataset.mode = demo && !auth ? "demo" : "member";
-  }, [demo, auth]);
-  useEffect(() => {
     document.title = `Her Hour — Oh Sakhi! | ${page === "discover" ? "Your time. Your circle." : page === "myplans" ? "My plans" : page === "host" ? "Host desk" : page === "circle" ? "My circle" : page === "admin" ? "Admin dashboard" : "My profile"}`;
   }, [page]);
   const open = (next: Dialog) => {
@@ -127,6 +109,10 @@ export function App() {
   };
   const close = () => setDialog(null);
   function navigate(destination: Page) {
+    if (!user && destination !== "discover") {
+      login();
+      return;
+    }
     close();
     setPage(destination);
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -136,15 +122,6 @@ export function App() {
       close();
       setAuth("login");
     } else open({ kind: "setup" });
-  }
-  function store(next: DemoState) {
-    setDemoState(next);
-    const saved = saveState(browserStorage(), next);
-    if (!saved)
-      notify(
-        "Browser storage is unavailable. Changes last only until you reload.",
-      );
-    return saved;
   }
   async function run(action: () => Promise<void>, rethrow = false) {
     if (locked.current) {
@@ -168,20 +145,16 @@ export function App() {
       setBusy(false);
     }
   }
-  function updateDemo(id: string, change: (event: CommunityEvent) => void) {
-    const next = structuredClone(demoState),
-      event = next.events.find((event) => event.id === id);
-    if (!event) throw Error("This plan is no longer available.");
-    change(event);
-    store(next);
-  }
   const current =
     dialog && "id" in dialog
-      ? data?.events.find((event) => event.id === dialog.id)
+      ? events.find((event) => event.id === dialog.id)
       : undefined;
+  const showDialog = Boolean(
+    dialog && (user || dialog.kind === "details" || dialog.kind === "setup"),
+  );
   const manageId = dialog?.kind === "manage" ? dialog.id : undefined;
   useEffect(() => {
-    if (demo || !manageId) return;
+    if (!user || !manageId) return;
     let active = true;
     setRegistrations([]);
     setAttendeeError("");
@@ -201,61 +174,38 @@ export function App() {
     return () => {
       active = false;
     };
-  }, [demo, manageId]);
+  }, [user, manageId]);
   const saveEvent = (input: EventInput) =>
     void run(async () => {
-      if (demo) {
-        const next = structuredClone(demoState);
-        if (current && dialog?.kind === "edit") {
-          const event = next.events.find((item) => item.id === current.id)!;
-          Object.assign(event, input, {
-            details_updated_at: new Date().toISOString(),
-          });
-        } else {
-          const [emoji, ...colors] = themes[input.category] ?? themes.Social;
-          next.events.push({
-            ...input,
-            id: crypto.randomUUID(),
-            host: "You",
-            emoji,
-            colors,
-            attendees: 0,
-            approved: [],
-            pending: [],
-            declined: [],
-            status: input.status ?? "published",
-          });
-        }
-        store(next);
-      } else {
-        await api.saveEvent(
-          dialog?.kind === "edit" ? current?.id : undefined,
-          user!.id,
-          input,
-        );
-        await live.refresh();
+      if (!user) {
+        login();
+        return;
       }
+      await api.saveEvent(
+        dialog?.kind === "edit" ? current?.id : undefined,
+        user.id,
+        input,
+      );
+      await live.refresh();
       close();
       setPage("myplans");
       notify(
         current
           ? "Plan updated — existing RSVPs are preserved."
-          : demo
-            ? "Demo plan saved"
-            : input.status === "draft"
-              ? "Draft saved — only you and administrators can view it"
-              : "Your event is published",
+          : input.status === "draft"
+            ? "Draft saved — only you and administrators can view it"
+            : "Your event is published",
       );
     });
   const saveProfile = (profile: MemberProfile) =>
     void run(async () => {
-      if (demo) {
-        if (store({ ...demoState, profile })) notify("Profile saved");
-      } else {
-        await api.saveProfile(user!.id, profile);
-        await live.refresh();
-        notify("Profile saved");
+      if (!user) {
+        login();
+        return;
       }
+      await api.saveProfile(user.id, profile);
+      await live.refresh();
+      notify("Profile saved");
     });
   const changeProfilePhoto = async (image: Blob | null) => {
     if (!user || !live.data)
@@ -287,30 +237,22 @@ export function App() {
       setPhotoCleanup(null);
       notify("Unused photo removed");
     });
-  const request = (event: CommunityEvent) =>
+  const request = (event: CommunityEvent) => {
+    if (!user) {
+      login();
+      return;
+    }
     void run(async () => {
-      if (demo)
-        updateDemo(event.id, (item) => {
-          if (!requestToJoin(item))
-            throw Error("This plan is full or you already have a spot.");
-        });
-      else {
-        await api.requestEvent(event.id);
-        await live.refresh();
-      }
-      notify(
-        demo
-          ? "Demo RSVP confirmed. No real booking was made."
-          : "Your spot is confirmed",
-      );
+      await api.requestEvent(event.id);
+      await live.refresh();
+      notify("Your spot is confirmed");
     });
+  };
   const withdrawRequest = (event: CommunityEvent) =>
     void run(async () => {
-      if (demo) updateDemo(event.id, withdraw);
-      else {
-        await api.withdrawEvent(event.id);
-        await live.refresh();
-      }
+      if (!user) return;
+      await api.withdrawEvent(event.id);
+      await live.refresh();
       notify("RSVP cancelled; your seat has been released");
     });
   const cancel = (event: CommunityEvent) => {
@@ -321,25 +263,12 @@ export function App() {
     )
       return;
     void run(async () => {
-      if (demo)
-        updateDemo(event.id, (item) => {
-          item.status = "cancelled";
-          item.approved = [];
-          item.pending = [];
-        });
-      else {
-        await api.setEventStatus(event.id, "cancelled");
-        await live.refresh();
-      }
+      if (!user) return;
+      await api.setEventStatus(event.id, "cancelled");
+      await live.refresh();
       close();
       notify("Plan cancelled");
     });
-  };
-  const reset = () => {
-    if (window.confirm("Reset your demo profile, plans and RSVPs?")) {
-      store(initialState());
-      notify("Demo data reset");
-    }
   };
   const logout = () =>
     void run(async () => {
@@ -441,7 +370,7 @@ export function App() {
         {toast}
       </>
     );
-  if (!data || (!demo && live.error))
+  if (user && (!data || live.error))
     return (
       <div className="content">
         <h1 className="page-title">Your community</h1>
@@ -463,37 +392,21 @@ export function App() {
         {toast}
       </div>
     );
-  const rows: Registration[] =
-    current && demo
-      ? [
-          ...current.pending.map((user_id) => ({
-            user_id,
-            status: "pending" as const,
-          })),
-          ...current.approved.map((user_id) => ({
-            user_id,
-            status: "approved" as const,
-          })),
-          ...(current.declined ?? []).map((user_id) => ({
-            user_id,
-            status: "declined" as const,
-          })),
-        ]
-      : registrations;
+  const create = () => (user ? open({ kind: "create" }) : login());
   return (
     <>
       <Layout
-        demo={demo}
-        isAdmin={!demo && Boolean(live.data?.isAdmin)}
-        page={page}
-        name={data.profile.name}
+        signedIn={Boolean(user)}
+        isAdmin={Boolean(user && data?.isAdmin)}
+        page={user ? page : "discover"}
+        name={data?.profile.name ?? ""}
         photoUrl={photo.url}
         navigate={navigate}
-        create={() => open({ kind: "create" })}
+        create={create}
         login={login}
-        modalOpen={Boolean(dialog)}
+        modalOpen={showDialog}
       >
-        {!demo && (
+        {user && (
           <div className="member-refresh">
             <button
               className="link-btn"
@@ -504,34 +417,37 @@ export function App() {
             </button>
           </div>
         )}
-        {page === "discover" && (
+        {(page === "discover" || !user) && (
           <Discover
-            events={data.events}
+            events={events}
             filter={filter}
             setFilter={setFilter}
             open={(id) => open({ kind: "details", id })}
-            create={() => open({ kind: "create" })}
-            demo={demo}
+            create={create}
+            loading={!user && publicEvents.loading}
+            error={!user ? publicEvents.error : undefined}
+            retry={
+              !user && supabase ? () => void publicEvents.refresh() : undefined
+            }
           />
         )}
-        {page === "myplans" && (
+        {user && page === "myplans" && (
           <MyPlans
-            events={data.events}
+            events={events}
             open={(id) => open({ kind: "details", id })}
             explore={() => navigate("discover")}
-            demo={demo}
           />
         )}
-        {page === "host" && (
+        {user && page === "host" && (
           <HostDesk
-            events={data.events}
+            events={events}
             open={(id) => open({ kind: "details", id })}
-            create={() => open({ kind: "create" })}
+            create={create}
           />
         )}
-        {page === "circle" && <Circle />}
+        {user && page === "circle" && <Circle />}
         {page === "admin" &&
-          (!demo && live.data?.isAdmin && user ? (
+          (data?.isAdmin && user ? (
             <Suspense
               fallback={
                 <p className="content" role="status">
@@ -557,7 +473,7 @@ export function App() {
               </button>
             </div>
           ))}
-        {page === "profile" && (
+        {user && data && page === "profile" && (
           <Suspense
             fallback={
               <p className="content" role="status">
@@ -574,11 +490,8 @@ export function App() {
               changePhoto={changeProfilePhoto}
               cleanupPending={Boolean(user && photoCleanup?.userId === user.id)}
               cleanup={cleanupPhoto}
-              demo={demo}
               busy={busy}
               save={saveProfile}
-              reset={reset}
-              login={login}
               logout={logout}
               deleted={accountDeleted}
               email={user?.email}
@@ -586,12 +499,12 @@ export function App() {
           </Suspense>
         )}
       </Layout>
-      {dialog && (
+      {dialog && showDialog && (
         <Modal
           opener={opener.current}
           title={
             dialog.kind === "setup"
-              ? "Real accounts need Supabase"
+              ? "Community temporarily unavailable"
               : dialog.kind === "create"
                 ? "Host a plan"
                 : dialog.kind === "edit"
@@ -609,23 +522,9 @@ export function App() {
           {dialog.kind === "setup" ? (
             <>
               <p>
-                Explore the sample website now. Real authentication, member
-                profiles, events and RSVPs need a connected Supabase project.
+                Account services are temporarily unavailable. Please try again
+                later or contact us.
               </p>
-              <ol className="setup-steps">
-                <li>
-                  Apply the migrations in <code>supabase/migrations</code> in
-                  order.
-                </li>
-                <li>
-                  Copy <code>.env.example</code> to <code>.env.local</code>.
-                </li>
-                <li>
-                  Set <code>VITE_SUPABASE_URL</code> and{" "}
-                  <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> using your project
-                  URL and public browser key, then restart Vite.
-                </li>
-              </ol>
               <button className="btn" onClick={close}>
                 Keep exploring
               </button>
@@ -635,32 +534,27 @@ export function App() {
               <EventForm
                 key={dialog.kind === "edit" ? current?.id : "new"}
                 event={dialog.kind === "edit" ? current : undefined}
-                demo={demo}
                 busy={busy}
                 save={saveEvent}
               />
-              {!demo &&
-                dialog.kind === "edit" &&
-                current &&
-                current.host === "You" && (
-                  <CoverEditor
-                    key={current.id}
-                    event={current}
-                    saved={(path) => live.setCoverPath(current.id, path)}
-                  />
-                )}
+              {user && dialog.kind === "edit" && current && current.is_host && (
+                <CoverEditor
+                  key={current.id}
+                  event={current}
+                  saved={(path) => live.setCoverPath(current.id, path)}
+                />
+              )}
             </Suspense>
           ) : dialog.kind === "details" ? (
             current && (
               <EventDetails
+                signedIn={Boolean(user)}
+                login={login}
                 close={close}
                 event={current}
-                demo={demo}
                 busy={busy}
                 isAdmin={Boolean(live.data?.isAdmin)}
-                isOrganizer={
-                  demo ? current.host === "You" : current.host_id === user?.id
-                }
+                isOrganizer={Boolean(user && current.host_id === user.id)}
                 cancel={cancel}
                 manage={() => open({ kind: "manage", id: current.id })}
                 edit={() => open({ kind: "edit", id: current.id })}
@@ -668,17 +562,10 @@ export function App() {
                 moderate={() => open({ kind: "moderate", id: current.id })}
                 publish={() =>
                   void run(async () => {
-                    if (demo)
-                      updateDemo(current.id, (event) => {
-                        event.status = "published";
-                      });
-                    else {
-                      await api.setEventStatus(current.id, "published");
-                      await live.refresh();
-                    }
-                    notify(
-                      demo ? "Demo plan published" : "Your event is published",
-                    );
+                    if (!user) return;
+                    await api.setEventStatus(current.id, "published");
+                    await live.refresh();
+                    notify("Your event is published");
                   })
                 }
                 request={request}
@@ -689,24 +576,10 @@ export function App() {
             current && (
               <RequestManager
                 event={current}
-                demo={demo}
-                busy={busy}
-                rows={rows}
+                rows={registrations}
                 attendeeError={attendeeError}
                 edit={() => open({ kind: "edit", id: current.id })}
                 back={() => open({ kind: "details", id: current.id })}
-                addSample={() =>
-                  updateDemo(current.id, (item) => {
-                    let n = 1;
-                    const ids = [
-                      ...item.pending,
-                      ...item.approved,
-                      ...(item.declined ?? []),
-                    ];
-                    while (ids.includes(`Sample member ${n}`)) n++;
-                    item.approved.push(`Sample member ${n}`);
-                  })
-                }
               />
             )
           ) : dialog.kind === "report" ? (

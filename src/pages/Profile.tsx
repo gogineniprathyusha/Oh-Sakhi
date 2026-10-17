@@ -6,11 +6,8 @@ import { PhotoEditor } from "../features/profile/PhotoEditor.tsx";
 import { DeleteAccount } from "../features/account/DeleteAccount.tsx";
 interface Props {
   profile: MemberProfile;
-  demo: boolean;
   busy: boolean;
   save: (profile: MemberProfile) => void;
-  reset: () => void;
-  login: () => void;
   logout: () => void;
   email?: string;
   photoUrl?: string;
@@ -24,10 +21,9 @@ interface Props {
 }
 function ProfileFields({
   profile,
-  demo,
   busy,
   save,
-}: Pick<Props, "profile" | "demo" | "busy" | "save">) {
+}: Pick<Props, "profile" | "busy" | "save">) {
   const [error, setError] = useState(""),
     [interests, setInterests] = useState(profile.interests);
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -44,12 +40,7 @@ function ProfileFields({
       setError("Please enter a city.");
       return;
     }
-    const chosen = demo
-      ? String(data.get("interests") ?? "")
-          .split(",")
-          .map((value) => value.trim())
-          .filter(Boolean)
-      : interests;
+    const chosen = interests;
     if (chosen.length > 12) {
       setError("Choose up to 12 interests.");
       return;
@@ -86,25 +77,11 @@ function ProfileFields({
             defaultValue={profile.bio}
           />
         </div>
-        {demo ? (
-          <div className="field">
-            <label htmlFor="profile-interests">
-              Interests (separate with commas)
-            </label>
-            <input
-              id="profile-interests"
-              name="interests"
-              maxLength={250}
-              defaultValue={profile.interests.join(", ")}
-            />
-          </div>
-        ) : (
-          <InterestPicker
-            selected={interests}
-            change={setInterests}
-            disabled={busy}
-          />
-        )}
+        <InterestPicker
+          selected={interests}
+          change={setInterests}
+          disabled={busy}
+        />
         <div className="form-grid">
           <div className="field">
             <label htmlFor="profile-city">City</label>
@@ -145,11 +122,8 @@ function ProfileFields({
 }
 export function Profile({
   profile,
-  demo,
   busy,
   save,
-  reset,
-  login,
   logout,
   email,
   photoUrl,
@@ -174,63 +148,34 @@ export function Profile({
       <h1 className="page-title">My profile</h1>
       <p className="section-intro">Let the community get to know you.</p>
       <div className="box">
-        <div className="friend-row demo-profile-heading">
+        <div className="friend-row profile-heading">
           <Avatar name={profile.name} url={photoUrl} />
           <div>
             <strong>{profile.name}</strong>
-            <small>
-              {demo ? "📍 Richmond, VA · Demo community profile" : email}
-            </small>
+            <small>{email}</small>
           </div>
         </div>
-        {!demo ? (
-          <PhotoEditor
-            hasPhoto={Boolean(profile.avatar_path)}
-            busy={busy}
-            loading={photoLoading}
-            previewError={photoError}
-            retry={retryPhoto}
-            change={changePhoto}
-            cleanupPending={cleanupPending}
-            cleanup={cleanup}
-          />
-        ) : (
-          <p className="small muted">
-            Photo uploads are available after you log in to a real account.
-          </p>
-        )}
+        <PhotoEditor
+          hasPhoto={Boolean(profile.avatar_path)}
+          busy={busy}
+          loading={photoLoading}
+          previewError={photoError}
+          retry={retryPhoto}
+          change={changePhoto}
+          cleanupPending={cleanupPending}
+          cleanup={cleanup}
+        />
         <ProfileFields
           key={fieldsKey}
           profile={profile}
-          demo={demo}
           busy={busy}
           save={save}
         />
       </div>
-      {demo ? (
-        <>
-          <p className="small muted">
-            Demo only. Changes stay in this browser. Real profiles, hosting and
-            RSVPs require Supabase and a signed-in account. Demo data is never
-            copied into a real account.
-          </p>
-          <div className="detail-actions">
-            <button className="link-btn" onClick={reset}>
-              Reset demo data
-            </button>
-            <button className="link-btn" onClick={login}>
-              Log in / Create a real account
-            </button>
-          </div>
-        </>
-      ) : (
-        <>
-          <button className="btn btn-outline" onClick={logout} disabled={busy}>
-            Log out
-          </button>
-          <DeleteAccount deleted={deleted} busy={busy} />
-        </>
-      )}
+      <button className="btn btn-outline" onClick={logout} disabled={busy}>
+        Log out
+      </button>
+      <DeleteAccount deleted={deleted} busy={busy} />
     </div>
   );
 }

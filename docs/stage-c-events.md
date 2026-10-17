@@ -1,5 +1,8 @@
 # Stage C events and attendance
 
+> Update: browser demo mode has been removed. Signed-out visitors now browse published Supabase events and sign in for account actions. Demo references below describe earlier-stage behavior and verification.
+
+
 The approval-based attendance model in this historical Stage C report is superseded by [instant RSVPs](instant-rsvps.md). The current UI confirms seats immediately and shows a read-only attendee list. Cover behavior and the recorded Stage C test results below remain applicable.
 
 Stage C builds on the merged authentication and member-profile work using Vite, React, TypeScript and Supabase. The approved sample design remains the fallback artwork; real covers appear on cards and event details.

@@ -1,4 +1,4 @@
-import { categories } from "../lib/demo-store.ts";
+import { categories } from "../features/events/catalog.ts";
 import type { CommunityEvent } from "../features/events/types.ts";
 import { EventCard } from "../components/EventCard.tsx";
 import { Empty } from "../components/Empty.tsx";
@@ -8,21 +8,25 @@ export function Discover({
   setFilter,
   open,
   create,
-  demo,
+  loading = false,
+  error = "",
+  retry,
 }: {
   events: CommunityEvent[];
   filter: string;
   setFilter: (filter: string) => void;
   open: (id: string) => void;
   create: () => void;
-  demo: boolean;
+  loading?: boolean;
+  error?: string;
+  retry?: () => void;
 }) {
   const shown = events
     .filter(
       (event) =>
         (filter === "All" || event.category === filter) &&
         (!event.status || event.status === "published") &&
-        (demo || Date.parse(event.starts_at ?? "") > Date.now()),
+        Date.parse(event.starts_at ?? "") > Date.now(),
     )
     .sort(
       (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time),
@@ -64,7 +68,18 @@ export function Discover({
           </button>
         ))}
       </div>
-      {shown.length ? (
+      {error ? (
+        <div className="box" role="alert">
+          <p>{error}</p>
+          {retry && (
+            <button className="btn btn-outline" onClick={retry}>
+              Try again
+            </button>
+          )}
+        </div>
+      ) : loading ? (
+        <p role="status">Loading experiences…</p>
+      ) : shown.length ? (
         <div className="grid">
           {shown.map((event) => (
             <EventCard key={event.id} event={event} open={open} />
@@ -85,12 +100,6 @@ export function Discover({
           in-person connections—not dating.
         </p>
       </div>
-      {demo && (
-        <p className="small muted">
-          Sample dates, hosts and availability are illustrative. These meetups
-          are not confirmed events.
-        </p>
-      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import type { CommunityEvent } from "../features/events/types.ts";
-import { status, seats } from "../lib/demo-store.ts";
+import { status, seats } from "../features/events/utils.ts";
 import {
   dateLabel,
   timeLabel,
@@ -24,7 +24,7 @@ export function EventCard({
           ? "✓ You’re going"
           : state === "pending"
             ? "RSVP not confirmed"
-            : event.declined?.includes("demo")
+            : state === "declined"
               ? "Not attending"
               : event.request_status === "cancelled"
                 ? "RSVP cancelled"
@@ -43,7 +43,7 @@ export function EventCard({
         <p>
           📍 {event.place}
           <br />
-          Hosted by {event.host}
+          Hosted by {event.is_host ? "You" : event.host}
         </p>
         {event.details_updated_at && (
           <span className="small muted">

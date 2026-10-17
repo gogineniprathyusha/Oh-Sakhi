@@ -12,7 +12,7 @@ const user = {
   created_at: "2026-10-13T12:00:00Z",
 };
 
-test("configured guests can explore demo, sign in, use member data and sign out without mixing stores", async ({
+test("guests must sign in to edit profiles and logout removes private data", async ({
   page,
 }) => {
   const errors: string[] = [],
@@ -80,27 +80,25 @@ test("configured guests can explore demo, sign in, use member data and sign out 
     });
   });
   await page.goto(origin);
-  await expect(page.locator(".event-card")).toHaveCount(6);
+  await expect(
+    page.getByText("Nothing here just yet", { exact: true }),
+  ).toBeVisible();
   await page.locator('.sidebar [data-page="profile"]').click();
-  await page
-    .getByLabel("Your first name or display name")
-    .fill("Browser-only friend");
-  await page.getByRole("button", { name: "Save profile", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Log in / Join", exact: true })
-    .click();
+  await expect(page.locator("#profile-name")).toHaveCount(0);
   await expect(
     page.getByRole("heading", { name: "Welcome back" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Explore the demo" }).click();
-  await expect(page.locator(".event-card")).toHaveCount(6);
+  await page.getByRole("button", { name: "Back to experiences" }).click();
+  await expect(
+    page.getByText("Nothing here just yet", { exact: true }),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: "Log in / Join", exact: true })
     .click();
   await page.getByLabel("Email", { exact: true }).fill("test@example.com");
   await page.getByLabel("Password", { exact: true }).fill("test-password");
   await page.getByRole("button", { name: "Log in", exact: true }).click();
-  await expect(page.locator(".demo-banner")).toHaveCount(0);
+
   await page.locator('.sidebar [data-page="profile"]').click();
   await expect(page.locator("#profile-name")).toHaveValue("Real account");
   await expect(page.locator("#profile-bio")).toHaveValue(
@@ -115,19 +113,23 @@ test("configured guests can explore demo, sign in, use member data and sign out 
   await page.locator('.sidebar [data-page="profile"]').click();
   await expect(page.locator("#profile-name")).toHaveValue("Updated account");
   await page.getByRole("button", { name: "Log out", exact: true }).click();
-  await expect(page.locator(".demo-banner")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Log in / Join", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator("#profile-name")).toHaveCount(0);
+  await expect(page.locator("#top-avatar")).toHaveCount(0);
   await page.locator('.sidebar [data-page="profile"]').click();
-  await expect(page.getByLabel("Your first name or display name")).toHaveValue(
-    "Browser-only friend",
-  );
+  await expect(
+    page.getByRole("heading", { name: "Welcome back" }),
+  ).toBeVisible();
   expect(errors).toEqual([]);
 });
 
-test("configured registration and reset forms remain reachable from the preview", async ({
+test("registration and reset forms remain reachable from discovery", async ({
   page,
 }) => {
   await page.route("https://her-hour-test.supabase.co/**", (route) =>
-    route.abort(),
+    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
   );
   await page.goto(origin);
   await page
@@ -145,8 +147,10 @@ test("configured registration and reset forms remain reachable from the preview"
   await expect(
     page.getByRole("button", { name: "Send reset link" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Explore the demo" }).click();
-  await expect(page.locator(".event-card")).toHaveCount(6);
+  await page.getByRole("button", { name: "Back to experiences" }).click();
+  await expect(
+    page.getByText("Nothing here just yet", { exact: true }),
+  ).toBeVisible();
 });
 
 test("real organiser screens publish, view confirmed attendees and edit without approval controls", async ({
