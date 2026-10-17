@@ -1,7 +1,11 @@
-import type { CSSProperties } from "react";
 import type { CommunityEvent } from "../features/events/types.ts";
 import { status, seats } from "../lib/demo-store.ts";
-import { dateLabel, timeLabel } from "../features/events/utils.ts";
+import {
+  dateLabel,
+  timeLabel,
+  availability,
+} from "../features/events/utils.ts";
+import { EventArtwork } from "../features/events/EventArtwork.tsx";
 export function EventCard({
   event,
   open,
@@ -22,25 +26,20 @@ export function EventCard({
             ? "⏳ Request pending"
             : event.declined?.includes("demo")
               ? "Request declined"
-              : `${seats(event)} spots left`;
+              : event.request_status === "cancelled"
+                ? "Request withdrawn"
+                : `${seats(event)} spots left`;
   return (
     <article className="event-card">
-      <div
-        className="event-art"
-        style={
-          { "--c1": event.colors[0], "--c2": event.colors[1] } as CSSProperties
-        }
-      >
-        <span className="pill">{event.category}</span>
-        <span className="art-emoji" aria-hidden="true">
-          {event.emoji}
-        </span>
-      </div>
+      <EventArtwork event={event} />
       <div className="event-body">
         <div className="event-meta">
           {dateLabel(event.date)} · {timeLabel(event.time)}
         </div>
         <h3>{event.title}</h3>
+        {event.starts_at && (
+          <p className="small muted">{availability(event)} · Richmond time</p>
+        )}
         <p>
           📍 {event.place}
           <br />

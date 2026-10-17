@@ -227,7 +227,7 @@ test("real organiser screens publish and edit through the event API and use seat
           ...input,
           details_updated_at: "2026-10-17T16:00:00Z",
         };
-      return route.fulfill({ status: 201 });
+      return json({ id: eventId });
     }
     if (url.pathname === "/rest/v1/rpc/get_meetup_attendees")
       return json([
@@ -306,7 +306,7 @@ test("real organiser screens publish and edit through the event API and use seat
     (call) => call.path === "/rest/v1/meetups" && call.method === "POST",
   );
   expect(create?.body.host_id).toBe(userId);
-  expect(create?.body.status).toBeUndefined(); // Database defaults to published, with no admin step.
+  expect(create?.body.status).toBe("published"); // The organiser publishes without an admin step.
   const edit = calls.find(
     (call) => call.path === "/rest/v1/meetups" && call.method === "PATCH",
   );

@@ -1,6 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { categories, today } from "../lib/demo-store.ts";
 import type { EventInput, CommunityEvent } from "../features/events/types.ts";
+import {
+  deadlineLabel,
+  EVENT_TIMEZONE,
+  eventInstant,
+  localDateTime,
+} from "../features/events/time.ts";
 export function EventForm({
   event,
   demo,
@@ -16,6 +22,11 @@ export function EventForm({
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
+    const requestedStatus =
+      (e.nativeEvent as SubmitEvent).submitter?.getAttribute("value") ===
+      "draft"
+        ? "draft"
+        : "published";
     const input: EventInput = {
       title: String(form.get("title")).trim(),
       category: String(form.get("category")),
@@ -24,12 +35,44 @@ export function EventForm({
       place: String(form.get("place")).trim(),
       capacity: Number(form.get("capacity")),
       description: String(form.get("description")).trim(),
+      status: event?.status === "draft" ? "draft" : requestedStatus,
+      host_label: String(form.get("host_label") ?? "").trim(),
     };
+    try {
+      const zone = event?.timezone ?? EVENT_TIMEZONE;
+      const start = eventInstant(`${input.date}T${input.time}`, zone);
+      const deadline = String(form.get("deadline") ?? "");
+      input.registration_deadline = deadline
+        ? eventInstant(deadline, zone)
+        : start;
+      const end = String(form.get("end") ?? "");
+      input.ends_at = end ? eventInstant(end, zone) : null;
+      if (input.registration_deadline > start)
+        throw Error(
+          "The registration deadline must be at or before the event starts.",
+        );
+      if (input.ends_at && input.ends_at <= start)
+        throw Error("The end time must be after the event starts.");
+      if (input.status !== "draft" && Date.parse(start) <= Date.now())
+        throw Error("Choose a future event time.");
+      if (
+        !event &&
+        input.status !== "draft" &&
+        Date.parse(input.registration_deadline) <= Date.now()
+      )
+        throw Error("Choose a future registration deadline.");
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Check the event times.",
+      );
+      return;
+    }
     const confirmed =
       event?.approved_total ??
       (event?.attendees ?? 0) + (event?.approved.length ?? 0);
     if (
       input.title.length < 3 ||
+      !input.host_label ||
       input.place.length < 2 ||
       input.description.length < 15 ||
       input.date < today()
@@ -130,6 +173,57 @@ export function EventForm({
             />
           </div>
         </div>
+        <p className="small muted">
+          All times are in {event?.timezone ?? "America/New_York"} (Richmond),
+          including daylight saving time.
+        </p>
+        <div className="form-grid">
+          <div className="field">
+            <label htmlFor="ev-deadline">
+              Registration deadline (optional)
+            </label>
+            <input
+              id="ev-deadline"
+              name="deadline"
+              type="datetime-local"
+              defaultValue={
+                event?.registration_deadline &&
+                event.registration_deadline !== event.starts_at
+                  ? localDateTime(event.registration_deadline, event.timezone)
+                  : ""
+              }
+            />
+            <small className="muted">
+              Leave blank to close requests when the event starts.
+            </small>
+          </div>
+          <div className="field">
+            <label htmlFor="ev-end">End date and time (optional)</label>
+            <input
+              id="ev-end"
+              name="end"
+              type="datetime-local"
+              defaultValue={
+                event?.ends_at
+                  ? localDateTime(event.ends_at, event.timezone)
+                  : ""
+              }
+            />
+          </div>
+        </div>
+        <div className="field">
+          <label htmlFor="ev-host-label">Public organiser name</label>
+          <input
+            id="ev-host-label"
+            name="host_label"
+            maxLength={60}
+            defaultValue={event?.host_label ?? "Her Hour host"}
+            required
+          />
+          <small className="muted">
+            Shown with your event. Your email and private profile stay private.
+          </small>
+        </div>
         <div className="field">
           <label htmlFor="ev-place">Area / meeting place</label>
           <input
@@ -155,15 +249,43 @@ export function EventForm({
           />
         </div>
         {error && <p role="alert">{error}</p>}
-        <button className="btn" type="submit" disabled={busy}>
-          {busy
-            ? "Saving…"
-            : event
-              ? "Save changes"
-              : demo
-                ? "Save demo plan"
-                : "Publish event"}
-        </button>
+        {event?.registration_deadline && (
+          <p className="small muted">
+            Current deadline:{" "}
+            {deadlineLabel(event.registration_deadline, event.timezone)}
+          </p>
+        )}
+        {!demo && !event && (
+          <p className="small muted">
+            You can add a cover image after saving, from Edit plan.
+          </p>
+        )}
+        <div className="detail-actions">
+          <button
+            className="btn"
+            type="submit"
+            value="published"
+            disabled={busy}
+          >
+            {busy
+              ? "Saving…"
+              : event
+                ? "Save changes"
+                : demo
+                  ? "Save demo plan"
+                  : "Publish event"}
+          </button>
+          {!event && (
+            <button
+              className="btn btn-outline"
+              type="submit"
+              value="draft"
+              disabled={busy}
+            >
+              Save draft
+            </button>
+          )}
+        </div>
       </form>
     </>
   );

@@ -1670,7 +1670,133 @@ test("organiser workflow migration upgrades the foundation and enforces the revi
   );
 });
 
-test("all six migrations also apply to an empty project with immediate member publication", async () => {
+test("Stage C restricts cover writes to the validated server path while preserving existing events", async () => {
+  const event = await createEvent();
+  await rpc("alice", "request_meetup", [event.id]);
+  await rpc("host", "decide_meetup_request", [event.id, ids.alice, "approved"]);
+  const original = `${event.id}/original.webp`,
+    next = `${event.id}/replacement.webp`;
+  await owner.query(
+    "insert into storage.objects(bucket_id,name,owner_id) values('event-covers',$1,$3),('event-covers',$2,$3)",
+    [original, next, ids.host],
+  );
+  await queryAs("host", "update public.meetups set cover_path=$1 where id=$2", [
+    original,
+    event.id,
+  ]);
+  await migrate(owner, ["202610170005_event_images.sql"]);
+  await denied(() =>
+    queryAs("host", "update public.meetups set cover_path=$1 where id=$2", [
+      next,
+      event.id,
+    ]),
+  );
+  await denied(() =>
+    queryAs(
+      "host",
+      "insert into storage.objects(bucket_id,name,owner_id) values('event-covers',$1,$2)",
+      [`${event.id}/bypass.webp`, ids.host],
+    ),
+  );
+  assert.equal(
+    (
+      await queryAs(
+        "host",
+        "delete from storage.objects where bucket_id='event-covers' and name=$1",
+        [original],
+      )
+    ).rowCount,
+    0,
+  );
+  await denied(() =>
+    rpc("host", "commit_event_image", [ids.host, event.id, original, next]),
+  );
+  await denied(() =>
+    rpc("admin", "authorize_event_image", [ids.host, event.id]),
+  );
+  async function service(fn: string, args: unknown[]) {
+    const client = await connection();
+    try {
+      await client.query("begin");
+      await client.query("set local role service_role");
+      await client.query("select set_config('request.jwt.claim.sub','',true)");
+      const result = await client.query(
+        `select to_jsonb(public.${fn}(${args.map((_, i) => `$${i + 1}`).join(",")})) as result`,
+        args,
+      );
+      await client.query("commit");
+      return result.rows[0].result;
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      await close(client);
+    }
+  }
+  await denied(() => service("authorize_event_image", [ids.alice, event.id]));
+  assert.equal(
+    (await service("authorize_event_image", [ids.host, event.id])).cover_path,
+    original,
+  );
+  const result = await service("commit_event_image", [
+    ids.host,
+    event.id,
+    original,
+    next,
+  ]);
+  assert.equal(result.cover_path, next);
+  assert.equal(result.status, "published");
+  assert.equal(result.approved_count, 1);
+  await denied(
+    () => service("commit_event_image", [ids.host, event.id, original, null]),
+    /another window/,
+  );
+  await denied(
+    () =>
+      service("commit_event_image", [
+        ids.host,
+        event.id,
+        next,
+        `${event.id}/missing.webp`,
+      ]),
+    /validated/,
+  );
+  assert.equal(
+    (
+      await queryAs("guest", "select * from storage.objects where name=$1", [
+        next,
+      ])
+    ).rowCount,
+    1,
+  );
+  await rpc("host", "set_meetup_status", [event.id, "cancelled"]);
+  await denied(
+    () => service("commit_event_image", [ids.host, event.id, next, null]),
+    /closed/,
+  );
+  assert.equal(
+    (
+      await owner.query(
+        "select status from public.meetup_requests where meetup_id=$1 and user_id=$2",
+        [event.id, ids.alice],
+      )
+    ).rows[0].status,
+    "cancelled",
+  );
+  // Profile uploads keep the earlier own-member policy and workflow.
+  assert.equal(
+    (
+      await queryAs(
+        "alice",
+        "insert into storage.objects(bucket_id,name,owner_id) values('profile-photos',$1,$2) returning id",
+        [`${ids.alice}/stage-c-profile.png`, ids.alice],
+      )
+    ).rowCount,
+    1,
+  );
+});
+
+test("all migrations also apply to an empty project with immediate member publication", async () => {
   await cluster.createDatabase("current_fresh");
   const client = await connection("current_fresh");
   await client.query(schemaFixture);

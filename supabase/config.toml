@@ -1,0 +1,6 @@
+project_id = "oh-sakhi"
+
+[functions.event-image]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/event-image/index.ts"

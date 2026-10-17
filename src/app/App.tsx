@@ -9,7 +9,6 @@ import {
 } from "react";
 import { Layout } from "../components/Layout.tsx";
 import { Modal } from "../components/Modal.tsx";
-import { EventForm } from "../components/EventForm.tsx";
 import { Discover } from "../pages/Discover.tsx";
 import { MyPlans } from "../pages/MyPlans.tsx";
 import { HostDesk } from "../pages/HostDesk.tsx";
@@ -54,6 +53,16 @@ const Profile = lazy(() =>
     default: module.Profile,
   })),
 );
+const EventForm = lazy(() =>
+  import("../components/EventForm.tsx").then((module) => ({
+    default: module.EventForm,
+  })),
+);
+const CoverEditor = lazy(() =>
+  import("../features/events/CoverEditor.tsx").then((module) => ({
+    default: module.CoverEditor,
+  })),
+);
 
 type Dialog =
   | { kind: "details" | "manage" | "edit" | "report" | "moderate"; id: string }
@@ -67,6 +76,11 @@ function browserStorage(): StorageLike | undefined {
 }
 
 export function App() {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => tick((value) => value + 1), 30000);
+    return () => clearInterval(timer);
+  }, []);
   const [demoState, setDemoState] = useState(() => loadState(browserStorage()));
   const [page, setPage] = useState<Page>("discover"),
     [filter, setFilter] = useState("All");
@@ -207,7 +221,7 @@ export function App() {
             approved: [],
             pending: [],
             declined: [],
-            status: "published",
+            status: input.status ?? "published",
           });
         }
         store(next);
@@ -226,7 +240,9 @@ export function App() {
           ? "Plan updated — existing requests are preserved."
           : demo
             ? "Demo plan saved"
-            : "Your event is published",
+            : input.status === "draft"
+              ? "Draft saved — only you and administrators can view it"
+              : "Your event is published",
       );
     });
   const saveProfile = (profile: MemberProfile) =>
@@ -489,6 +505,17 @@ export function App() {
         login={login}
         modalOpen={Boolean(dialog)}
       >
+        {!demo && (
+          <div className="member-refresh">
+            <button
+              className="link-btn"
+              disabled={busy || live.loading}
+              onClick={() => void live.refresh()}
+            >
+              {live.loading ? "Refreshing…" : "Refresh plans"}
+            </button>
+          </div>
+        )}
         {page === "discover" && (
           <Discover
             events={data.events}
@@ -588,13 +615,25 @@ export function App() {
               </button>
             </>
           ) : dialog.kind === "create" || dialog.kind === "edit" ? (
-            <EventForm
-              key={dialog.kind === "edit" ? current?.id : "new"}
-              event={dialog.kind === "edit" ? current : undefined}
-              demo={demo}
-              busy={busy}
-              save={saveEvent}
-            />
+            <Suspense fallback={<p role="status">Loading event editor…</p>}>
+              <EventForm
+                key={dialog.kind === "edit" ? current?.id : "new"}
+                event={dialog.kind === "edit" ? current : undefined}
+                demo={demo}
+                busy={busy}
+                save={saveEvent}
+              />
+              {!demo &&
+                dialog.kind === "edit" &&
+                current &&
+                current.host === "You" && (
+                  <CoverEditor
+                    key={current.id}
+                    event={current}
+                    saved={(path) => live.setCoverPath(current.id, path)}
+                  />
+                )}
+            </Suspense>
           ) : dialog.kind === "details" ? (
             current && (
               <EventDetails
@@ -609,9 +648,17 @@ export function App() {
                 moderate={() => open({ kind: "moderate", id: current.id })}
                 publish={() =>
                   void run(async () => {
-                    await api.setEventStatus(current.id, "published");
-                    await live.refresh();
-                    notify("Your event is published");
+                    if (demo)
+                      updateDemo(current.id, (event) => {
+                        event.status = "published";
+                      });
+                    else {
+                      await api.setEventStatus(current.id, "published");
+                      await live.refresh();
+                    }
+                    notify(
+                      demo ? "Demo plan published" : "Your event is published",
+                    );
                   })
                 }
                 request={request}

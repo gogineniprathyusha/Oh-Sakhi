@@ -8,12 +8,13 @@
     "build": "npm run typecheck && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "check": "npm run typecheck && npm run lint",
+    "check:functions": "npx --yes deno@2.9.6 check --config supabase/functions/event-image/deno.json supabase/functions/event-image/index.ts",
     "test": "node --test tests/unit/*.test.ts",
     "test:e2e": "playwright test",
     "test:db": "node --test --test-concurrency=1 tests/database/*.test.ts",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.tests.json --noEmit",
-    "lint": "eslint src tests vite.config.ts playwright.config.ts eslint.config.mjs",
-    "format": "prettier --write src tests *.ts *.json *.mjs index.html README.md docs"
+    "lint": "eslint src tests supabase/functions vite.config.ts playwright.config.ts eslint.config.mjs",
+    "format": "prettier --write src tests supabase/functions *.ts *.json *.mjs index.html README.md docs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@imagemagick/magick-wasm": "0.0.44",
     "@playwright/test": "^1.64.0",
     "@types/node": "^24.19.2",
     "@types/pg": "^8.23.1",

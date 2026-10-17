@@ -1,6 +1,9 @@
 import type { CommunityEvent } from "./types.ts";
 import { canRequest, dateLabel, isClosed, timeLabel } from "./utils.ts";
 import { seats, status } from "../../lib/demo-store.ts";
+import { EventArtwork } from "./EventArtwork.tsx";
+import { deadlineLabel } from "./time.ts";
+import { availability } from "./utils.ts";
 interface Props {
   event: CommunityEvent;
   demo: boolean;
@@ -31,14 +34,7 @@ export function EventDetails({
 }: Props) {
   return (
     <>
-      <div
-        className="detail-hero"
-        style={{
-          background: `linear-gradient(135deg,${current.colors[0]},${current.colors[1]})`,
-        }}
-      >
-        {current.emoji}
-      </div>
+      <EventArtwork event={current} detail />
       <div className="detail-info">
         <span>
           🗓 {dateLabel(current.date)} · {timeLabel(current.time)}
@@ -48,6 +44,23 @@ export function EventDetails({
           👥 {seats(current)} of {current.capacity} spots left
         </span>
       </div>
+      {!demo && (
+        <p className="small muted">
+          {availability(current)} · {current.timezone ?? "America/New_York"}{" "}
+          (Richmond)
+          {current.ends_at && (
+            <> · Ends {deadlineLabel(current.ends_at, current.timezone)}</>
+          )}
+          {current.registration_deadline && (
+            <>
+              <br />
+              Request by{" "}
+              {deadlineLabel(current.registration_deadline, current.timezone)}.
+              Requests need organiser approval.
+            </>
+          )}
+        </p>
+      )}
       <p className="detail-description">{current.description}</p>
       <div className="detail-note">
         <strong>
@@ -95,9 +108,9 @@ export function EventDetails({
                 Edit plan
               </button>
             )}
-            {!demo && current.status === "draft" && (
+            {current.status === "draft" && (
               <button className="btn" disabled={busy} onClick={publish}>
-                Publish event
+                {demo ? "Publish demo plan" : "Publish event"}
               </button>
             )}
           </>
@@ -136,6 +149,12 @@ export function EventDetails({
                 ? "This plan is full"
                 : "Request to join →"}
           </button>
+        )}
+        {current.request_status === "cancelled" && !isClosed(current, demo) && (
+          <p className="small muted">
+            You withdrew your previous request. You can request again while
+            registration is open.
+          </p>
         )}
         <button className="btn btn-light" onClick={close}>
           Back to plans

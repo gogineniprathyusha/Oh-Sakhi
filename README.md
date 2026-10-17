@@ -53,9 +53,10 @@ The application has been connected and its authentication flows checked against 
    supabase/migrations/202610170002_authorization_and_registrations.sql
    supabase/migrations/202610170003_storage.sql
    supabase/migrations/202610170004_organizer_workflow.sql
+   supabase/migrations/202610170005_event_images.sql
    ```
 
-   If some migrations are already applied, run only the outstanding ones. The final migration supersedes the earlier admin-publication rules. Previously saved drafts remain private and can be published directly by their organiser; existing registrations are retained.
+   If some migrations are already applied, run only the outstanding ones. The organiser-workflow migration supersedes the earlier admin-publication rules. Previously saved drafts remain private and can be published directly by their organiser; existing registrations are retained. The Stage C image migration requires the `event-image` function for cover changes; follow [its deployment order](docs/stage-c-events.md).
 
 3. Copy `.env.example` to `.env.local` and set:
 
@@ -94,6 +95,7 @@ Oh Sakhi/
 │   ├── styles/                   # Preserved visual design and responsive styles
 │   └── main.tsx                  # React entry point
 ├── supabase/migrations/          # Original migrations plus additive improvements
+├── supabase/functions/event-image/ # Server authentication and cover sanitization
 ├── tests/{unit,browser,database}/
 ├── docs/database.md
 ├── index.html
@@ -109,6 +111,7 @@ The retired vanilla JavaScript entry points were backed up outside the project a
 
 ```bash
 npm run check       # Strict TypeScript for app/tests plus ESLint
+npm run check:functions # Deno type checking for the Edge Function
 npm test            # Demo persistence, capacity and configuration
 npm run test:db     # Real temporary PostgreSQL: RLS, migrations, history and races
 npm run test:e2e    # Chrome: desktop/mobile, auth fixtures and design comparison
@@ -125,7 +128,7 @@ Browser tests need Google Chrome and start isolated Vite servers on **5183 and 5
 
 Hosted signup, email confirmation, login, profile persistence and logout have been verified; the project owner also verified password recovery. Neighborhood editing, database interest choices, and private profile photo upload/replacement/removal are implemented and checked against hosted Supabase. Details and verification limits are recorded in [docs/member-profiles.md](docs/member-profiles.md).
 
-Event-cover upload controls and richer event fields are future UI work. The current organiser form covers the original preview’s fields and defaults the deadline to event start. The schema already supports covers, deadlines and audit history.
+Stage C adds cover upload/replacement/removal, deadlines, end times, public organiser names, drafts and clearer availability/history. Organisers still publish immediately and control seats. See [docs/stage-c-events.md](docs/stage-c-events.md) for the server upload boundary, the new migration, deployment steps and verification results.
 
 Basic event reporting and administrator removal are connected to the database APIs. A full admin dashboard, report-review/member-access screens, CSV export, legal/contact pages and account deletion are still pending. My circle clearly explains that connection requests and private messaging are not implemented. No notifications or real messages are simulated.
 
