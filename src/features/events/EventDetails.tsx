@@ -9,6 +9,7 @@ interface Props {
   demo: boolean;
   busy: boolean;
   isAdmin: boolean;
+  isOrganizer: boolean;
   manage: () => void;
   edit: () => void;
   report: () => void;
@@ -17,12 +18,14 @@ interface Props {
   close: () => void;
   request: (event: CommunityEvent) => void;
   withdrawRequest: (event: CommunityEvent) => void;
+  cancel: (event: CommunityEvent) => void;
 }
 export function EventDetails({
   event: current,
   demo,
   busy,
   isAdmin,
+  isOrganizer,
   manage,
   edit,
   report,
@@ -31,6 +34,7 @@ export function EventDetails({
   close,
   request,
   withdrawRequest,
+  cancel,
 }: Props) {
   return (
     <>
@@ -98,15 +102,24 @@ export function EventDetails({
         </p>
       ) : null}
       <div className="detail-actions">
-        {current.host === "You" ? (
+        {isOrganizer ? (
           <>
             <button className="btn" onClick={manage}>
               Manage requests
             </button>
             {["draft", "published"].includes(current.status ?? "published") && (
-              <button className="btn btn-outline" onClick={edit}>
-                Edit plan
-              </button>
+              <>
+                <button className="btn btn-outline" onClick={edit}>
+                  Edit plan
+                </button>
+                <button
+                  className="btn btn-outline"
+                  disabled={busy}
+                  onClick={() => cancel(current)}
+                >
+                  {demo ? "Cancel this demo plan" : "Cancel event"}
+                </button>
+              </>
             )}
             {current.status === "draft" && (
               <button className="btn" disabled={busy} onClick={publish}>
@@ -159,7 +172,7 @@ export function EventDetails({
         <button className="btn btn-light" onClick={close}>
           Back to plans
         </button>
-        {!demo && current.status !== "removed" && (
+        {!demo && !isOrganizer && current.status !== "removed" && (
           <button className="link-btn" onClick={report}>
             Report this event
           </button>
