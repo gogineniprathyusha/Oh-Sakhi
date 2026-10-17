@@ -1,7 +1,8 @@
 export type EventStatus =
   "draft" | "published" | "cancelled" | "completed" | "removed";
 export type RequestStatus = "pending" | "approved" | "declined" | "cancelled";
-export type Page = "discover" | "myplans" | "host" | "circle" | "profile";
+export type Page =
+  "discover" | "myplans" | "host" | "circle" | "profile" | "admin";
 export type AuthMode = "login" | "signup" | "reset" | "update";
 export interface Profile {
   name: string;

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { Page } from "../features/events/types.ts";
 interface Props {
   demo: boolean;
+  isAdmin?: boolean;
   page: Page;
   name: string;
   photoUrl?: string;
@@ -18,9 +19,11 @@ const items: [Page, string, string][] = [
   ["host", "▦", "Host desk"],
   ["circle", "✧", "My circle"],
   ["profile", "◯", "My profile"],
+  ["admin", "⚑", "Admin"],
 ];
 export function Layout({
   demo,
+  isAdmin = false,
   page,
   name,
   photoUrl,
@@ -32,7 +35,10 @@ export function Layout({
 }: Props) {
   const navigation = (mobile = false) =>
     items
-      .filter(([key]) => !demo || key !== "host")
+      .filter(
+        ([key]) =>
+          (!demo || key !== "host") && (key !== "admin" || (!demo && isAdmin)),
+      )
       .map(([key, icon, label]) => (
         <button
           key={key}

@@ -2153,6 +2153,395 @@ test("instant RSVP migration preserves seats, resolves legacy queues and enforce
   );
 });
 
+test("Stage D administrator APIs enforce private reads, audited decisions and restricted exports", async (t) => {
+  const beforeRows = (
+    await owner.query("select count(*) from public.meetup_requests")
+  ).rows[0].count;
+  await migrate(owner, ["202610170008_admin_dashboard.sql"]);
+  assert.equal(
+    (await owner.query("select count(*) from public.meetup_requests")).rows[0]
+      .count,
+    beforeRows,
+  );
+  await owner.query("delete from private.rate_limits");
+  await owner.query(
+    "update private.member_access set status='active' where user_id=any($1::uuid[])",
+    [[ids.host, ids.alice, ids.bea]],
+  );
+  const event = (await createEvent({ title: "Stage D coffee" })).id;
+  await rpc("alice", "request_meetup", [event]);
+  // Reports are intentionally write-only for members; obtain the fixture ID as owner.
+  await queryAs(
+    "alice",
+    `insert into public.reports(reporter_id,meetup_id,category,details) values($1,$2,'Safety','A specific concern to review.')`,
+    [ids.alice, event],
+  );
+  const report = (
+    await owner.query("select id from public.reports where meetup_id=$1", [
+      event,
+    ])
+  ).rows[0].id;
+  await t.test(
+    "ordinary members, suspended sessions and anonymous callers cannot invoke administrator APIs",
+    async () => {
+      for (const actor of ["host", "alice", "suspended", "guest"]) {
+        for (const [fn, args] of [
+          ["admin_statistics", []],
+          ["admin_list_members", ["all", "", 0, 20]],
+          ["admin_list_reports", ["all", "", 0, 20]],
+          ["admin_list_events", ["all", "", 0, 20]],
+          ["admin_list_audit", [0, 20]],
+        ] as [string, unknown[]][]) {
+          await denied(() => rpc(actor, fn, args));
+        }
+        await denied(() =>
+          rpc(actor, "review_report", [
+            report,
+            "resolved",
+            "A sufficiently detailed resolution.",
+          ]),
+        );
+        await denied(() =>
+          rpc(actor, "set_member_access", [
+            ids.bea,
+            "suspended",
+            "A sufficiently detailed reason.",
+          ]),
+        );
+      }
+    },
+  );
+  await t.test(
+    "admin lists paginate deterministically, search literal input and expose no emails or profile bios",
+    async () => {
+      const page = (await rpc("admin", "admin_list_members", ["all", "", 0, 2]))
+        .rows[0].admin_list_members;
+      const next = (await rpc("admin", "admin_list_members", ["all", "", 2, 2]))
+        .rows[0].admin_list_members;
+      assert.equal(page.items.length, 2);
+      assert.ok(page.total >= 7);
+      assert.ok(
+        !next.items.some((row: { id: string }) =>
+          page.items.some((prior: { id: string }) => prior.id === row.id),
+        ),
+      );
+      assert.equal("email" in page.items[0], false);
+      assert.equal("bio" in page.items[0], false);
+      assert.equal(
+        (await rpc("admin", "admin_list_members", ["all", ids.alice, 0, 20]))
+          .rows[0].admin_list_members.items[0].id,
+        ids.alice,
+      );
+      assert.deepEqual(
+        (await rpc("admin", "admin_list_members", ["all", "%", 0, 20])).rows[0]
+          .admin_list_members.items,
+        [],
+      );
+      const reports = (
+        await rpc("admin", "admin_list_reports", ["open", "Stage D", 0, 20])
+      ).rows[0].admin_list_reports;
+      assert.equal(reports.items[0].id, report);
+      assert.equal(reports.items[0].reporter_name, "alice");
+      const events = (
+        await rpc("admin", "admin_list_events", ["published", event, 0, 20])
+      ).rows[0].admin_list_events;
+      assert.equal(events.items[0].approved_count, 1);
+      for (const args of [
+        ["all", "", -1, 20],
+        ["all", "", 0, 101],
+        ["all", "", 0, null],
+        ["all", "x".repeat(101), 0, 20],
+        ["invalid", "", 0, 20],
+      ])
+        await denied(
+          () => rpc("admin", "admin_list_members", args),
+          /invalid/i,
+        );
+      assert.deepEqual(
+        (await rpc("admin", "admin_list_reports", ["all", "missing", 0, 20]))
+          .rows[0].admin_list_reports,
+        { total: 0, items: [] },
+      );
+    },
+  );
+  await t.test(
+    "reviewing, resolving, dismissing and reopening reports records the actor and required notes",
+    async () => {
+      await denied(
+        () => rpc("admin", "review_report", [report, "resolved", "short"]),
+        /note/i,
+      );
+      await denied(
+        () =>
+          rpc("admin", "review_report", [
+            report,
+            "invalid",
+            "A valid length note",
+          ]),
+        /invalid/i,
+      );
+      await denied(
+        () =>
+          rpc("admin", "review_report", [
+            randomUUID(),
+            "resolved",
+            "A valid length note",
+          ]),
+        /not found/i,
+      );
+      for (const status of ["reviewing", "resolved", "dismissed", "open"]) {
+        const row = (
+          await queryAs(
+            "admin",
+            "select * from public.review_report($1,$2,$3)",
+            [report, status, "Reviewed the reported details."],
+          )
+        ).rows[0];
+        assert.equal(row.status, status);
+        assert.equal(row.reviewed_by, ids.admin);
+        assert.ok(row.reviewed_at);
+      }
+      const logs = await owner.query(
+        "select * from private.admin_audit_log where target_id=$1 and action='review_report' order by id desc",
+        [report],
+      );
+      assert.equal(logs.rowCount, 4);
+      assert.equal(logs.rows[0].details.from, "dismissed");
+      assert.equal(logs.rows[0].details.note, "Reviewed the reported details.");
+    },
+  );
+  await t.test(
+    "suspension blocks an existing session and hides its hosted events without deleting registrations; restoration recovers access",
+    async () => {
+      const historyBefore = (
+        await owner.query(
+          "select count(*) from public.registration_history where meetup_id=$1",
+          [event],
+        )
+      ).rows[0].count;
+      await denied(
+        () =>
+          rpc("admin", "set_member_access", [ids.host, "suspended", "short"]),
+        /reason/i,
+      );
+      await denied(
+        () =>
+          rpc("admin", "set_member_access", [
+            ids.admin,
+            "suspended",
+            "A valid access reason.",
+          ]),
+        /trusted SQL/i,
+      );
+      await rpc("admin", "set_member_access", [
+        ids.host,
+        "suspended",
+        "Suspending this test organiser.",
+      ]);
+      assert.equal(
+        (await queryAs("host", "select * from public.profiles")).rowCount,
+        0,
+      );
+      assert.equal(
+        (
+          await queryAs(
+            "guest",
+            "select * from public.meetup_directory where id=$1",
+            [event],
+          )
+        ).rowCount,
+        0,
+      );
+      await denied(() => rpc("bea", "request_meetup", [event]));
+      await denied(() => rpc("host", "export_meetup_attendees", [event]));
+      assert.equal(
+        (
+          await owner.query(
+            "select approved_count from public.meetups where id=$1",
+            [event],
+          )
+        ).rows[0].approved_count,
+        1,
+      );
+      assert.equal(
+        (
+          await owner.query(
+            "select count(*) from public.registration_history where meetup_id=$1",
+            [event],
+          )
+        ).rows[0].count,
+        historyBefore,
+      );
+      await rpc("admin", "set_member_access", [
+        ids.host,
+        "active",
+        "Restoring this test organiser.",
+      ]);
+      assert.equal(
+        (
+          await queryAs(
+            "guest",
+            "select * from public.meetup_directory where id=$1",
+            [event],
+          )
+        ).rowCount,
+        1,
+      );
+      await rpc("bea", "request_meetup", [event]);
+      const before = (
+        await owner.query(
+          "select count(*) from private.admin_audit_log where action='member_access' and target_id=$1",
+          [ids.host],
+        )
+      ).rows[0].count;
+      await rpc("admin", "set_member_access", [
+        ids.host,
+        "active",
+        "Repeated request stays idempotent.",
+      ]);
+      assert.equal(
+        (
+          await owner.query(
+            "select count(*) from private.admin_audit_log where action='member_access' and target_id=$1",
+            [ids.host],
+          )
+        ).rows[0].count,
+        before,
+      );
+    },
+  );
+  await t.test(
+    "only organiser or active admin can export minimal attendee data; successful exports are audited",
+    async () => {
+      for (const actor of ["outsider", "alice", "guest"])
+        await denied(() => rpc(actor, "export_meetup_attendees", [event]));
+      await denied(() =>
+        rpc("admin", "export_meetup_attendees", [randomUUID()]),
+      );
+      for (const actor of ["host", "admin"]) {
+        const rows = await queryAs(
+          actor,
+          "select * from public.export_meetup_attendees($1)",
+          [event],
+        );
+        assert.equal(rows.rowCount, 2);
+        assert.deepEqual(Object.keys(rows.rows[0]).sort(), [
+          "created_at",
+          "display_name",
+          "status",
+          "user_id",
+        ]);
+      }
+      assert.equal(
+        (
+          await owner.query(
+            "select count(*)::integer count from private.admin_audit_log where action='attendee_export' and target_id=$1",
+            [event],
+          )
+        ).rows[0].count,
+        2,
+      );
+      await denied(() =>
+        queryAs("host", "select * from private.admin_audit_log"),
+      );
+      await denied(() =>
+        queryAs(
+          "alice",
+          "insert into private.admin_roles(user_id) values($1)",
+          [ids.alice],
+        ),
+      );
+      // The organiser already exported once; the next 29 reach the hourly limit.
+      for (let count = 0; count < 29; count++)
+        await rpc("host", "export_meetup_attendees", [event]);
+      await denied(
+        () => rpc("host", "export_meetup_attendees", [event]),
+        /too many requests/i,
+      );
+      assert.equal(
+        (
+          await owner.query(
+            "select count(*)::integer count from private.admin_audit_log where action='attendee_export' and target_id=$1",
+            [event],
+          )
+        ).rows[0].count,
+        31,
+      );
+    },
+  );
+  await t.test(
+    "admin removal cancels seats and preserves report/history; statistics and audit match stored data",
+    async () => {
+      await rpc("admin", "moderate_meetup", [
+        event,
+        "Confirmed violation in the test event.",
+      ]);
+      assert.equal(
+        (
+          await owner.query(
+            "select approved_count from public.meetups where id=$1",
+            [event],
+          )
+        ).rows[0].approved_count,
+        0,
+      );
+      assert.equal(
+        (
+          await owner.query(
+            "select count(*)::integer count from public.meetup_requests where meetup_id=$1 and status='cancelled'",
+            [event],
+          )
+        ).rows[0].count,
+        2,
+      );
+      assert.equal(
+        (
+          await owner.query("select status from public.reports where id=$1", [
+            report,
+          ])
+        ).rows[0].status,
+        "open",
+      );
+      const stats = (await rpc("admin", "admin_statistics", [])).rows[0]
+        .admin_statistics;
+      assert.equal(
+        stats.members,
+        (
+          await owner.query(
+            "select count(*)::integer count from public.profiles",
+          )
+        ).rows[0].count,
+      );
+      assert.equal(
+        stats.confirmed_rsvps,
+        (
+          await owner.query(
+            "select count(*)::integer count from public.meetup_requests where status='approved'",
+          )
+        ).rows[0].count,
+      );
+      const audit = (await rpc("admin", "admin_list_audit", [0, 100])).rows[0]
+        .admin_list_audit;
+      assert.ok(
+        audit.items.some(
+          (row: { action: string; target_id: string }) =>
+            row.action === "event_removed" && row.target_id === event,
+        ),
+      );
+      await owner.query(
+        "update private.member_access set status='suspended' where user_id=$1",
+        [ids.admin],
+      );
+      await denied(() => rpc("admin", "admin_statistics", []));
+      await denied(() => rpc("admin", "admin_list_audit", [0, 20]));
+      await owner.query(
+        "update private.member_access set status='active' where user_id=$1",
+        [ids.admin],
+      );
+    },
+  );
+});
+
 test("all migrations also apply to an empty project with immediate member publication", async () => {
   await cluster.createDatabase("current_fresh");
   const client = await connection("current_fresh");

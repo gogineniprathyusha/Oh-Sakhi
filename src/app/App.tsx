@@ -51,6 +51,9 @@ const Profile = lazy(() =>
     default: module.Profile,
   })),
 );
+const Admin = lazy(() =>
+  import("../pages/Admin.tsx").then((module) => ({ default: module.Admin })),
+);
 const EventForm = lazy(() =>
   import("../components/EventForm.tsx").then((module) => ({
     default: module.EventForm,
@@ -114,7 +117,7 @@ export function App() {
     document.body.dataset.mode = demo && !auth ? "demo" : "member";
   }, [demo, auth]);
   useEffect(() => {
-    document.title = `Her Hour — Oh Sakhi! | ${page === "discover" ? "Your time. Your circle." : page === "myplans" ? "My plans" : page === "host" ? "Host desk" : page === "circle" ? "My circle" : "My profile"}`;
+    document.title = `Her Hour — Oh Sakhi! | ${page === "discover" ? "Your time. Your circle." : page === "myplans" ? "My plans" : page === "host" ? "Host desk" : page === "circle" ? "My circle" : page === "admin" ? "Admin dashboard" : "My profile"}`;
   }, [page]);
   const open = (next: Dialog) => {
     if (!dialog) opener.current = document.activeElement as HTMLElement | null;
@@ -466,6 +469,7 @@ export function App() {
     <>
       <Layout
         demo={demo}
+        isAdmin={!demo && Boolean(live.data?.isAdmin)}
         page={page}
         name={data.profile.name}
         photoUrl={photo.url}
@@ -511,6 +515,33 @@ export function App() {
           />
         )}
         {page === "circle" && <Circle />}
+        {page === "admin" &&
+          (!demo && live.data?.isAdmin && user ? (
+            <Suspense
+              fallback={
+                <p className="content" role="status">
+                  Loading admin dashboard…
+                </p>
+              }
+            >
+              <Admin
+                key={user.id}
+                userId={user.id}
+                communityChanged={live.refresh}
+                openEvent={(id) => open({ kind: "details", id })}
+              />
+            </Suspense>
+          ) : (
+            <div className="content">
+              <h1 className="page-title">Administrator access required</h1>
+              <p>
+                Sign in with an active administrator account to use these tools.
+              </p>
+              <button className="btn" onClick={() => navigate("discover")}>
+                Explore events
+              </button>
+            </div>
+          ))}
         {page === "profile" && (
           <Suspense
             fallback={
