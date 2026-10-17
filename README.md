@@ -41,7 +41,7 @@ Admin removal hides the event from discovery, cancels pending/approved registrat
 
 ## Connect Supabase when ready
 
-The application has been connected and its authentication flows checked against the development Supabase project. Results and remaining profile work are recorded in [docs/authentication-verification.md](docs/authentication-verification.md). For a new project, follow the setup steps below. Detailed schema and API notes are in [docs/database.md](docs/database.md).
+The application has been connected and its authentication flows checked against the development Supabase project. Results are recorded in [docs/authentication-verification.md](docs/authentication-verification.md); profile editing and private photos are documented in [docs/member-profiles.md](docs/member-profiles.md). For a new project, follow the setup steps below. Detailed schema and API notes are in [docs/database.md](docs/database.md).
 
 1. Create your Supabase development project.
 2. In its SQL Editor, apply these files **once each, in this order**:
@@ -87,6 +87,7 @@ Oh Sakhi/
 │   ├── components/               # Shared layout, cards, accessible modal and forms
 │   ├── pages/                    # Discover, My plans, Host desk, Circle, Profile, Auth
 │   ├── features/events/          # Event types, details, request manager and date rules
+│   ├── features/profile/         # Interest choices, image preparation and private photo API
 │   ├── hooks/                    # Auth/session and member-data loading
 │   ├── lib/                      # Supabase client, API boundary, config and demo store
 │   ├── data/                     # Original preview’s six sample events
@@ -122,7 +123,9 @@ Browser tests need Google Chrome and start isolated Vite servers on **5183 and 5
 
 ## Remaining launch work
 
-Hosted signup, email confirmation, login, profile persistence and logout have been verified; the project owner also verified password recovery. Hosted Storage uploads still need verification. The schema supports profile photos, event covers, deadlines and audit history; upload controls and richer event fields are future UI work. The current organiser form covers the original preview’s fields and defaults the deadline to event start.
+Hosted signup, email confirmation, login, profile persistence and logout have been verified; the project owner also verified password recovery. Neighborhood editing, database interest choices, and private profile photo upload/replacement/removal are implemented and checked against hosted Supabase. Details and verification limits are recorded in [docs/member-profiles.md](docs/member-profiles.md).
+
+Event-cover upload controls and richer event fields are future UI work. The current organiser form covers the original preview’s fields and defaults the deadline to event start. The schema already supports covers, deadlines and audit history.
 
 Basic event reporting and administrator removal are connected to the database APIs. A full admin dashboard, report-review/member-access screens, CSV export, legal/contact pages and account deletion are still pending. My circle clearly explains that connection requests and private messaging are not implemented. No notifications or real messages are simulated.
 

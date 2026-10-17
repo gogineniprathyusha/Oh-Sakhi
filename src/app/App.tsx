@@ -3,6 +3,8 @@ import {
   useEffect,
   useRef,
   useState,
+  lazy,
+  Suspense,
   type FormEvent,
 } from "react";
 import { Layout } from "../components/Layout.tsx";
@@ -12,8 +14,13 @@ import { Discover } from "../pages/Discover.tsx";
 import { MyPlans } from "../pages/MyPlans.tsx";
 import { HostDesk } from "../pages/HostDesk.tsx";
 import { Circle } from "../pages/Circle.tsx";
-import { Profile } from "../pages/Profile.tsx";
 import { Auth } from "../pages/Auth.tsx";
+import { useProfilePhoto } from "../hooks/useProfilePhoto.ts";
+import {
+  changePhoto,
+  PhotoChangeError,
+  removeUnusedPhoto,
+} from "../features/profile/profile-api.ts";
 import { useSession } from "../hooks/useSession.ts";
 import { useLiveCommunity } from "../hooks/useLiveCommunity.ts";
 import { authCallback, supabase } from "../lib/supabase.ts";
@@ -41,6 +48,12 @@ import type {
   Registration,
   StorageLike,
 } from "../features/events/types.ts";
+
+const Profile = lazy(() =>
+  import("../pages/Profile.tsx").then((module) => ({
+    default: module.Profile,
+  })),
+);
 
 type Dialog =
   | { kind: "details" | "manage" | "edit" | "report" | "moderate"; id: string }
@@ -74,6 +87,11 @@ export function App() {
     live = useLiveCommunity(user?.id),
     demo = !user;
   const data = demo ? demoState : live.data;
+  const photo = useProfilePhoto(user?.id, live.data?.profile.avatar_path);
+  const [photoCleanup, setPhotoCleanup] = useState<{
+    userId: string;
+    path: string;
+  } | null>(null);
   const notify = useCallback((text: string) => {
     clearTimeout(timer.current);
     setMessage(text);
@@ -111,8 +129,12 @@ export function App() {
       );
     return saved;
   }
-  async function run(action: () => Promise<void>) {
-    if (locked.current) return;
+  async function run(action: () => Promise<void>, rethrow = false) {
+    if (locked.current) {
+      if (rethrow)
+        throw Error("Please wait for your current change to finish.");
+      return;
+    }
     locked.current = true;
     setBusy(true);
     try {
@@ -123,6 +145,7 @@ export function App() {
           ? error.message
           : "Unable to complete this action. Please try again.",
       );
+      if (rethrow) throw error;
     } finally {
       locked.current = false;
       setBusy(false);
@@ -215,6 +238,36 @@ export function App() {
         await live.refresh();
         notify("Profile saved");
       }
+    });
+  const changeProfilePhoto = async (image: Blob | null) => {
+    if (!user || !live.data)
+      throw Error("Log in to manage your profile photo.");
+    const userId = user.id;
+    await run(async () => {
+      try {
+        const changed = await changePhoto(
+          userId,
+          live.data!.profile.avatar_path ?? null,
+          image,
+        );
+        setPhotoCleanup(
+          changed.cleanupPath ? { userId, path: changed.cleanupPath } : null,
+        );
+        live.setAvatarPath(changed.path);
+        notify(image ? "Profile photo saved" : "Profile photo removed");
+      } catch (error) {
+        if (error instanceof PhotoChangeError && error.cleanupPath)
+          setPhotoCleanup({ userId, path: error.cleanupPath });
+        throw error;
+      }
+    }, true);
+  };
+  const cleanupPhoto = () =>
+    void run(async () => {
+      if (!user || photoCleanup?.userId !== user.id) return;
+      await removeUnusedPhoto(user.id, photoCleanup.path);
+      setPhotoCleanup(null);
+      notify("Unused photo removed");
     });
   const request = (event: CommunityEvent) =>
     void run(async () => {
@@ -430,6 +483,7 @@ export function App() {
         demo={demo}
         page={page}
         name={data.profile.name}
+        photoUrl={photo.url}
         navigate={navigate}
         create={() => open({ kind: "create" })}
         login={login}
@@ -462,16 +516,31 @@ export function App() {
         )}
         {page === "circle" && <Circle />}
         {page === "profile" && (
-          <Profile
-            profile={data.profile}
-            demo={demo}
-            busy={busy}
-            save={saveProfile}
-            reset={reset}
-            login={login}
-            logout={logout}
-            email={user?.email}
-          />
+          <Suspense
+            fallback={
+              <p className="content" role="status">
+                Loading your profile…
+              </p>
+            }
+          >
+            <Profile
+              profile={data.profile}
+              photoUrl={photo.url}
+              photoLoading={photo.loading}
+              photoError={photo.error}
+              retryPhoto={photo.retry}
+              changePhoto={changeProfilePhoto}
+              cleanupPending={Boolean(user && photoCleanup?.userId === user.id)}
+              cleanup={cleanupPhoto}
+              demo={demo}
+              busy={busy}
+              save={saveProfile}
+              reset={reset}
+              login={login}
+              logout={logout}
+              email={user?.email}
+            />
+          </Suspense>
         )}
       </Layout>
       {dialog && (

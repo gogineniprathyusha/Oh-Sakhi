@@ -122,6 +122,9 @@ function validState(value: unknown): value is DemoState {
     data.profile.name.trim() &&
     text(data.profile.bio, 350) &&
     stringList(data.profile.interests) &&
+    (data.profile.city === undefined || text(data.profile.city, 80)) &&
+    (data.profile.neighborhood === undefined ||
+      text(data.profile.neighborhood, 80)) &&
     Array.isArray(data.events) &&
     data.events.every(
       (event) =>

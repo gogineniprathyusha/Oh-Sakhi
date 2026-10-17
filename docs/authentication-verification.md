@@ -40,4 +40,4 @@ No SQL migrations, event permissions, branding or layout were changed.
 
 The new authentication browser checks use the real Supabase JavaScript client with intercepted service responses. Those checks validate application behaviour, not hosted email delivery. The separate live checks above identify what was exercised against the connected project.
 
-Photo upload, interest-selection controls and neighborhood editing remain later Stage B profile work. Hosted Storage uploads and full admin screens are outside this authentication verification change.
+Photo upload, interest-selection controls and neighborhood editing are documented in the subsequent [member profile change](member-profiles.md). Hosted Storage uploads and full admin screens were outside this authentication verification change.

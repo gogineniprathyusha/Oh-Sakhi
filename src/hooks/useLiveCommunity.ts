@@ -8,21 +8,27 @@ export function useLiveCommunity(userId: string | undefined) {
   const [error, setError] = useState(""),
     [loading, setLoading] = useState(false);
   const generation = useRef(0);
+  const currentUser = useRef(userId);
+  currentUser.current = userId;
   const refresh = useCallback(async () => {
+    if (currentUser.current !== userId) return false;
     const ticket = ++generation.current;
     if (!userId) {
       setData(null);
       setError("");
-      return;
+      setLoading(false);
+      return false;
     }
     setLoading(true);
     setError("");
     try {
       const loaded = await loadCommunity(userId);
-      if (ticket === generation.current) {
+      if (ticket === generation.current && currentUser.current === userId) {
         setOwner(userId);
         setData(loaded);
+        return true;
       }
+      return false;
     } catch (error) {
       if (ticket === generation.current)
         setError(
@@ -30,6 +36,7 @@ export function useLiveCommunity(userId: string | undefined) {
             ? error.message
             : "Unable to load your community.",
         );
+      return false;
     } finally {
       if (ticket === generation.current) setLoading(false);
     }
@@ -40,5 +47,22 @@ export function useLiveCommunity(userId: string | undefined) {
       generation.current++;
     };
   }, [refresh]);
-  return { data: owner === userId ? data : null, error, loading, refresh };
+  const setAvatarPath = useCallback(
+    (path: string | null) => {
+      if (currentUser.current !== userId) return;
+      setData((previous) =>
+        previous
+          ? { ...previous, profile: { ...previous.profile, avatar_path: path } }
+          : previous,
+      );
+    },
+    [userId],
+  );
+  return {
+    data: owner === userId ? data : null,
+    error,
+    loading,
+    refresh,
+    setAvatarPath,
+  };
 }

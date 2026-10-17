@@ -57,7 +57,7 @@ test("configured guests can explore demo, sign in, use member data and sign out 
       if (request.method() === "PATCH") {
         writes.push(request.postDataJSON());
         member = { ...member, ...request.postDataJSON() };
-        return route.fulfill({ status: 204 });
+        return json({ id: userId });
       }
       return json(
         url.searchParams.get("select") === "*"
@@ -65,6 +65,8 @@ test("configured guests can explore demo, sign in, use member data and sign out 
           : [{ id: userId, display_name: member.display_name }],
       );
     }
+    if (url.pathname === "/rest/v1/interests")
+      return json([{ id: "books", name: "Books" }]);
     if (url.pathname === "/rest/v1/rpc/get_my_access")
       return json({ status: "active", is_admin: false });
     if (url.pathname === "/rest/v1/meetup_directory") return json([]);
@@ -199,6 +201,8 @@ test("real organiser screens publish and edit through the event API and use seat
         interests: ["Coffee"],
         city: "Richmond",
       });
+    if (url.pathname === "/rest/v1/interests")
+      return json([{ id: "books", name: "Books" }]);
     if (url.pathname === "/rest/v1/rpc/get_my_access")
       return json({ status: "active", is_admin: false });
     if (url.pathname === "/rest/v1/meetup_directory")
