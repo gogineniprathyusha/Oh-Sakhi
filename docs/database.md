@@ -18,8 +18,9 @@ Apply files in filename order, once each. Do not edit migrations that have alrea
 | `202610170006_instant_rsvps.sql`                   | Immediate member reservations, retired approval API and safe legacy queue conversion                              |
 | `202610170007_rsvp_counter_fix.sql`                | Separate insert/update reservation paths and reconcile mismatched counters                                        |
 | `202610170008_admin_dashboard.sql`                 | Bounded administrator reads, recorded report/access decisions, audit access and authorised attendee exports       |
+| `202610170009_account_deletion.sql`                | Own-account summary, server-only deletion preparation/file listing and protected pending access                   |
 
-The historical foundation required administrator publication. **The organiser-workflow migration replaces that policy.** Apply all ten files for the current application and deploy the `event-image` function for covers. The frontend reads `meetup_directory` and uses registration RPCs; it does not write registration rows directly. Existing manual SQL Editor installations should apply only outstanding files.
+The historical foundation required administrator publication. **The organiser-workflow migration replaces that policy.** Apply all eleven files for the current application and deploy `event-image` for covers and `delete-account` for account deletion. The frontend reads `meetup_directory` and uses registration RPCs; it does not write registration rows directly. Existing manual SQL Editor installations should apply only outstanding files.
 
 The first foundation migration classifies legacy events as drafts because they previously had no publication status. Their registrations are preserved. The organiser-workflow migration keeps those drafts private to avoid unexpectedly publishing unfinished content. Their organiser can publish them directly, with no admin review. Newly created events default to `published`.
 

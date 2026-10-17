@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { supabase } from "../lib/supabase.ts";
 import { withoutAuthCallback } from "../lib/auth-callback.ts";
 import type { AuthMode } from "../features/events/types.ts";
+import { LegalLinks } from "../components/LegalLinks.tsx";
 export function Auth({
   mode,
   setMode,
@@ -115,7 +116,7 @@ export function Auth({
         </p>
         <div className="auth-bloom">✳</div>
       </div>
-      <div className="auth-panel">
+      <main className="auth-panel">
         <div className="auth-card">
           <button className="link-btn auth-back" onClick={back} disabled={busy}>
             ← Explore the demo
@@ -221,8 +222,9 @@ export function Auth({
             By joining, you agree to be respectful of other members. Do not
             share sensitive information in public meetup descriptions.
           </p>
+          <LegalLinks />
         </div>
-      </div>
+      </main>
     </div>
   );
 }

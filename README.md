@@ -44,7 +44,7 @@ Admin removal hides the event from discovery, cancels active RSVPs and preserves
 The application has been connected and its authentication flows checked against the development Supabase project. Results are recorded in [docs/authentication-verification.md](docs/authentication-verification.md); profile editing and private photos are documented in [docs/member-profiles.md](docs/member-profiles.md). For a new project, follow the setup steps below. Detailed schema and API notes are in [docs/database.md](docs/database.md).
 
 1. Create your Supabase development project.
-2. In its SQL Editor, apply these files **once each, in this order**:
+2. In its SQL Editor, apply these files **once each, in this order**. Deploy `event-image` before its image migration and `delete-account` before its deletion migration, following the linked stage guides:
 
    ```text
    supabase/migrations/202610130001_init.sql
@@ -57,6 +57,7 @@ The application has been connected and its authentication flows checked against 
    supabase/migrations/202610170006_instant_rsvps.sql
    supabase/migrations/202610170007_rsvp_counter_fix.sql
    supabase/migrations/202610170008_admin_dashboard.sql
+   supabase/migrations/202610170009_account_deletion.sql
    ```
 
    If some migrations are already applied, run only the outstanding ones. The organiser-workflow migration supersedes the earlier admin-publication rules. Previously saved drafts remain private and can be published directly by their organiser; existing registrations are retained. The Stage C image migration requires the `event-image` function for cover changes; follow [its deployment order](docs/stage-c-events.md).
@@ -84,6 +85,8 @@ The application has been connected and its authentication flows checked against 
 
 7. With an active administrator account, use **Refresh plans** or sign in again to reveal **Admin** in desktop/mobile navigation. The dashboard provides statistics, report review, member suspension/restoration, event moderation, attendee exports and audit history. Organisers also have CSV export under **View attendees**. Follow [Stage D administration](docs/stage-d-admin.md) for setup, access semantics and verification.
 
+Account deletion additionally needs the authenticated `delete-account` Edge Function deployed before its migration. See [Stage E launch preparation](docs/stage-e-launch.md) for deployment order, deletion effects, hosting configuration, backups and remaining launch decisions. The new public information pages use the operator/contact supplied by the owner and remain pre-launch drafts for review.
+
 ## Source layout
 
 ```text
@@ -95,6 +98,7 @@ Oh Sakhi/
 │   ├── features/events/          # Event types, details, request manager and date rules
 │   ├── features/profile/         # Interest choices, image preparation and private photo API
 │   ├── features/admin/           # Protected API boundary, moderation forms and record lists
+│   ├── features/account/         # Deliberate account deletion and retry UI
 │   ├── hooks/                    # Auth/session and member-data loading
 │   ├── lib/                      # Supabase client, API boundary, config and demo store
 │   ├── data/                     # Original preview’s six sample events
@@ -102,6 +106,9 @@ Oh Sakhi/
 │   └── main.tsx                  # React entry point
 ├── supabase/migrations/          # Original migrations plus additive improvements
 ├── supabase/functions/event-image/ # Server authentication and cover sanitization
+├── supabase/functions/delete-account/ # Verified self-deletion and Storage cleanup
+├── .github/workflows/verify.yml  # Credential-free checks on pushes/PRs
+├── vercel.json                  # Prepared hosting headers and public-page rewrites
 ├── tests/{unit,browser,database}/
 ├── docs/database.md
 ├── index.html
@@ -138,6 +145,8 @@ Stage C adds cover upload/replacement/removal, deadlines, end times, public orga
 
 Stage D provides the protected admin dashboard, report review, member access controls, event moderation, statistics, CSV exports and audit history. Details are in [docs/stage-d-admin.md](docs/stage-d-admin.md). My circle clearly explains that connection requests and private messaging are not implemented. No notifications or real messages are simulated.
 
-The agreed remaining stages are **E — launch readiness** (legal/contact pages, account deletion, final checks and deployment preparation), **F — event emails** (RSVP confirmations, changes, cancellations and reminders), and **G — community growth** (waitlists, improved discovery, announcements/preferences and member feedback). Public deployment requires the project owner's approval.
+Stage E adds public Privacy/Terms/Guidelines/Contact routes, password-confirmed account deletion, accessibility improvements, hosting headers/rewrites, CI and a launch/operations guide. See [docs/stage-e-launch.md](docs/stage-e-launch.md). Legal approval, domain/hosting approval, production Auth SMTP and retention/backup decisions remain owner-controlled launch steps. No public launch has been performed.
+
+The remaining feature stages are **F — event emails** (RSVP confirmations, changes, cancellations and reminders), and **G — community growth** (waitlists, improved discovery, announcements/preferences and member feedback).
 
 For later Vercel hosting, use the Vite preset, `npm run build`, and output directory `dist`. Set the public environment variables in the hosting project and update Supabase’s auth URLs to the deployed origin. No public deployment has been performed.

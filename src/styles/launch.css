@@ -1,0 +1,128 @@
+.menu-title,
+.event-footer span {
+  color: var(--muted);
+}
+:root {
+  --muted: #74636e;
+  --dust: #8c5e76;
+}
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 12px;
+  transform: translateY(-160%);
+  z-index: 60;
+  background: var(--plum);
+  color: white;
+  padding: 12px 18px;
+  border-radius: 8px;
+}
+.skip-link:focus {
+  transform: translateY(0);
+}
+:focus-visible {
+  outline: 3px solid #aa7891;
+  outline-offset: 4px;
+}
+.legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 20px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.legal-links a,
+.information-content a,
+.account-deletion a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.community-footer {
+  padding: 12px 50px 32px;
+  border-top: 1px solid var(--line);
+}
+.information-shell {
+  max-width: 1100px;
+  margin: auto;
+}
+.information-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  padding: 28px 30px;
+  border-bottom: 1px solid var(--line);
+}
+.information-header .brand {
+  align-items: center;
+}
+.information-content {
+  max-width: 820px;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+.information-content h2,
+.account-deletion h2 {
+  font: 500 25px "Playfair Display";
+  color: var(--plum);
+  margin-top: 28px;
+}
+.information-footer {
+  padding: 24px 30px 40px;
+  border-top: 1px solid var(--line);
+}
+.contact-email {
+  font-size: 18px;
+}
+.consent {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  line-height: 1.6;
+  margin: 18px 0;
+}
+.consent input {
+  margin-top: 5px;
+  accent-color: var(--wine);
+}
+.account-deletion {
+  max-width: 760px;
+  overflow-wrap: anywhere;
+}
+.account-deletion h2 {
+  margin-top: 0;
+}
+.account-deletion p {
+  line-height: 1.7;
+}
+@media (max-width: 750px) {
+  .community-footer {
+    padding: 20px 17px 105px;
+  }
+  .information-header {
+    padding: 20px 17px;
+    align-items: flex-start;
+  }
+  .information-header .brand {
+    font-size: 23px;
+    gap: 5px;
+  }
+  .information-header .link-btn {
+    max-width: 115px;
+  }
+  .information-content {
+    padding-bottom: 40px;
+  }
+  .legal-links {
+    gap: 12px 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -24,6 +24,7 @@ for (const width of [1440, 390]) {
     }
     await original.goto(pathToFileURL(reference).href);
     await page.goto("/");
+    await expect(page.locator(".event-card")).toHaveCount(6);
     await Promise.all([
       page.evaluate(() => document.fonts.ready),
       original.evaluate(() => document.fonts.ready),

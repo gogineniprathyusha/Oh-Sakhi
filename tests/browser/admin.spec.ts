@@ -2,8 +2,12 @@ import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { adminMock } from "./helpers/admin.ts";
 import { memberId, meetupId } from "./helpers/events.ts";
-const navigate = async (page: import("@playwright/test").Page) =>
-  page.locator('.sidebar [data-page="admin"]').click();
+const navigate = async (page: import("@playwright/test").Page) => {
+  await page.locator('.sidebar [data-page="admin"]').click();
+  await expect(
+    page.getByRole("heading", { name: "Admin dashboard", exact: true }),
+  ).toBeVisible();
+};
 test("demo and ordinary members never see administrator navigation or load admin data", async ({
   page,
 }) => {

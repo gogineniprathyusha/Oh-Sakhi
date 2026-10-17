@@ -4,3 +4,8 @@ project_id = "oh-sakhi"
 enabled = true
 verify_jwt = true
 entrypoint = "./functions/event-image/index.ts"
+
+[functions.delete-account]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/delete-account/index.ts"

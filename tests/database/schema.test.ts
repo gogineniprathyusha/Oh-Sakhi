@@ -2542,6 +2542,227 @@ test("Stage D administrator APIs enforce private reads, audited decisions and re
   );
 });
 
+test("Stage E account deletion stays self-scoped, retryable and inaccessible to browser roles", async (t) => {
+  await migrate(owner, ["202610170009_account_deletion.sql"]);
+  ids.deleting = randomUUID();
+  await owner.query(
+    "insert into auth.users(id,email,raw_user_meta_data) values($1,'delete@example.test','{\"display_name\":\"Disposable member\"}')",
+    [ids.deleting],
+  );
+  const hosted = await createEvent(
+    { title: "Disposable hosted event" },
+    "deleting",
+  );
+  const other = await createEvent({ title: "Other organiser stays" });
+  await rpc("alice", "request_meetup", [hosted.id]);
+  await rpc("deleting", "request_meetup", [other.id]);
+  async function service(fn: string, args: unknown[]) {
+    return as("outsider", async (db) => {
+      await db.query("set local role service_role");
+      await db.query("select set_config('request.jwt.claim.sub','',true)");
+      return db.query(
+        `select to_jsonb(public.${fn}(${args.map((_, i) => `$${i + 1}`).join(",")})) result`,
+        args,
+      );
+    });
+  }
+  await t.test(
+    "members see only their own summary; service-only deletion and file manifests cannot be spoofed",
+    async () => {
+      const row = (await rpc("deleting", "get_account_deletion_summary", []))
+        .rows[0].get_account_deletion_summary;
+      assert.equal(row.hosted_events, 1);
+      assert.equal(row.upcoming_events, 1);
+      assert.equal(row.rsvps, 1);
+      assert.equal(row.is_admin, false);
+      for (const actor of ["deleting", "admin", "guest"])
+        for (const [fn, args] of [
+          ["prepare_account_deletion", [ids.deleting]],
+          ["account_deletion_files", [ids.deleting]],
+          ["consume_account_deletion_attempt", [ids.deleting]],
+        ] as [string, unknown[]][])
+          await denied(() => rpc(actor, fn, args));
+      await denied(() => rpc("guest", "get_account_deletion_summary", []));
+      await denied(
+        () => service("prepare_account_deletion", [ids.admin]),
+        /administrator/i,
+      );
+      await denied(
+        () => service("prepare_account_deletion", [ids.deleting]),
+        /cancel.*events/i,
+      );
+      assert.equal(
+        (
+          await owner.query(
+            "select count(*)::integer n from private.account_deletions",
+          )
+        ).rows[0].n,
+        0,
+      );
+    },
+  );
+  await t.test(
+    "freeze is idempotent, prevents restoration, and includes only owned app files, including unlinked service covers",
+    async () => {
+      await rpc("deleting", "set_meetup_status", [hosted.id, "cancelled"]);
+      await owner.query(
+        "insert into storage.objects(bucket_id,name,owner_id) values('profile-photos',$1,$4),('event-covers',$2,null),('profile-photos',$3,$5)",
+        [
+          `${ids.deleting}/unlinked.png`,
+          `${hosted.id}/orphan.webp`,
+          `${ids.host}/keep.png`,
+          ids.deleting,
+          ids.host,
+        ],
+      );
+      await service("prepare_account_deletion", [ids.deleting]);
+      await service("prepare_account_deletion", [ids.deleting]);
+      assert.equal(
+        (await queryAs("deleting", "select * from public.profiles")).rowCount,
+        0,
+      );
+      await denied(() => rpc("deleting", "request_meetup", [other.id]));
+      await denied(
+        () =>
+          rpc("admin", "set_member_access", [
+            ids.deleting,
+            "active",
+            "Trying to reopen an account in deletion.",
+          ]),
+        /deletion/i,
+      );
+      const summary = (
+        await rpc("deleting", "get_account_deletion_summary", [])
+      ).rows[0].get_account_deletion_summary;
+      assert.equal(summary.deleting, true);
+      const files = await as("outsider", async (db) => {
+        await db.query("set local role service_role");
+        return db.query("select * from public.account_deletion_files($1)", [
+          ids.deleting,
+        ]);
+      });
+      assert.equal(files.rowCount, 2);
+      assert.ok(
+        files.rows.some((row) => row.name === `${hosted.id}/orphan.webp`),
+      );
+      assert.ok(!files.rows.some((row) => row.name === `${ids.host}/keep.png`));
+      // Fixture Storage deletion only: production code uses Storage.remove to delete bytes.
+      await owner.query(
+        "delete from storage.objects where (bucket_id,name) in (select * from public.account_deletion_files($1))",
+        [ids.deleting],
+      );
+    },
+  );
+  await t.test(
+    "Auth cascade removes the intended account data and hosted history, releases other seats, and rejects residual JWT access",
+    async () => {
+      await owner.query(
+        "insert into private.admin_audit_log(actor_id,action,target_id) values($1,'test_deletion',$1)",
+        [ids.deleting],
+      );
+      await owner.query("delete from auth.users where id=$1", [ids.deleting]);
+      assert.equal(
+        (
+          await owner.query("select * from public.profiles where id=$1", [
+            ids.deleting,
+          ])
+        ).rowCount,
+        0,
+      );
+      assert.equal(
+        (
+          await owner.query("select * from public.meetups where id=$1", [
+            hosted.id,
+          ])
+        ).rowCount,
+        0,
+      );
+      assert.equal(
+        (
+          await owner.query(
+            "select approved_count from public.meetups where id=$1",
+            [other.id],
+          )
+        ).rows[0].approved_count,
+        0,
+      );
+      assert.equal(
+        (
+          await owner.query(
+            "select * from private.account_deletions where user_id=$1",
+            [ids.deleting],
+          )
+        ).rowCount,
+        0,
+      );
+      assert.equal(
+        (
+          await owner.query(
+            "select actor_id from private.admin_audit_log where action='test_deletion'",
+          )
+        ).rows[0].actor_id,
+        null,
+      );
+      assert.equal(
+        (
+          await owner.query("select * from storage.objects where name=$1", [
+            `${ids.host}/keep.png`,
+          ])
+        ).rowCount,
+        1,
+      );
+      await denied(() => rpc("deleting", "request_meetup", [other.id]));
+      await denied(
+        () => rpc("deleting", "get_account_deletion_summary", []),
+        /sign in/i,
+      );
+      assert.equal(
+        (await queryAs("deleting", "select * from public.profiles")).rowCount,
+        0,
+      );
+    },
+  );
+  await t.test(
+    "deletion attempts are rate limited and unrelated owned buckets block preparation without deleting anything",
+    async () => {
+      for (let attempt = 0; attempt < 5; attempt++)
+        await service("consume_account_deletion_attempt", [ids.bea]);
+      await denied(
+        () => service("consume_account_deletion_attempt", [ids.bea]),
+        /too many/i,
+      );
+      await owner.query(
+        "insert into storage.buckets(id,name) values('unrelated-app','unrelated-app')",
+      );
+      await owner.query(
+        "insert into storage.objects(bucket_id,name,owner_id) values('unrelated-app','keep-this',$1)",
+        [ids.bea],
+      );
+      await denied(
+        () => service("prepare_account_deletion", [ids.bea]),
+        /support-assisted/i,
+      );
+      assert.equal(
+        (
+          await owner.query(
+            "select * from private.account_deletions where user_id=$1",
+            [ids.bea],
+          )
+        ).rowCount,
+        0,
+      );
+      assert.equal(
+        (
+          await owner.query(
+            "select * from storage.objects where bucket_id='unrelated-app'",
+          )
+        ).rowCount,
+        1,
+      );
+    },
+  );
+});
+
 test("all migrations also apply to an empty project with immediate member publication", async () => {
   await cluster.createDatabase("current_fresh");
   const client = await connection("current_fresh");
