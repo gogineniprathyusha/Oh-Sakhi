@@ -55,11 +55,9 @@ test("demo RSVP persists across reload and can be withdrawn", async ({
     .getByRole("button", { name: "View details for A Little Pottery Date" })
     .click();
   await expect(page.getByRole("dialog")).toContainText("Sample meetup");
-  await page
-    .getByRole("button", { name: "Request to join →", exact: true })
-    .click();
+  await page.getByRole("button", { name: "RSVP →", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText(
-    "No host has been contacted",
+    "Your demo spot is confirmed",
   );
   await page.getByRole("button", { name: "Close dialog" }).click();
   await nav(page, "myplans").click();
@@ -68,16 +66,16 @@ test("demo RSVP persists across reload and can be withdrawn", async ({
   await nav(page, "myplans").click();
   await expect(
     page.locator(".event-card").filter({ hasText: "A Little Pottery Date" }),
-  ).toContainText("Request pending");
+  ).toContainText("You’re going");
   await page
     .getByRole("button", { name: "View details for A Little Pottery Date" })
     .click();
-  await page.getByRole("button", { name: "Withdraw request" }).click();
+  await page.getByRole("button", { name: "Cancel my spot" }).click();
   await page.keyboard.press("Escape");
   await expect(page.locator(".event-card")).toHaveCount(2);
   await expect(
     page.locator(".event-card").filter({ hasText: "A Little Pottery Date" }),
-  ).toContainText("Request withdrawn");
+  ).toContainText("RSVP cancelled");
 });
 
 test("profile edits persist, remain escaped, and reset restores original RSVP data", async ({
@@ -108,7 +106,7 @@ test("profile edits persist, remain escaped, and reset restores original RSVP da
   await page.getByRole("button", { name: "Cancel my spot" }).click();
   await page.keyboard.press("Escape");
   await expect(page.locator(".event-card")).toHaveCount(1);
-  await expect(page.locator(".event-card")).toContainText("Request withdrawn");
+  await expect(page.locator(".event-card")).toContainText("RSVP cancelled");
   await nav(page, "profile").click();
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Reset demo data" }).click();
@@ -119,7 +117,7 @@ test("profile edits persist, remain escaped, and reset restores original RSVP da
   await expect(page.locator(".event-card")).toHaveCount(1);
 });
 
-test("local hosting supports drafts, sample requests, approvals, capacity, edits and cancellation", async ({
+test("local hosting supports drafts, instant attendees, capacity, edits and cancellation", async ({
   page,
 }) => {
   await page.goto("/");
@@ -147,25 +145,15 @@ test("local hosting supports drafts, sample requests, approvals, capacity, edits
     .getByRole("button", { name: "Publish demo plan", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Manage requests", exact: true })
+    .getByRole("button", { name: "View attendees", exact: true })
     .click();
   for (let index = 0; index < 4; index++) {
-    await page.getByRole("button", { name: "Add sample request" }).click();
-    await page.getByRole("button", { name: "Approve", exact: true }).click();
+    await page.getByRole("button", { name: "Add sample attendee" }).click();
   }
-  await expect(page.getByRole("dialog")).toContainText("4 / 4 approved seats");
+  await expect(page.getByRole("dialog")).toContainText("4 / 4 confirmed seats");
   await expect(
-    page.getByRole("button", { name: "Add sample request" }),
+    page.getByRole("button", { name: "Add sample attendee" }),
   ).toBeDisabled();
-  await page
-    .getByRole("button", { name: "Revoke approval", exact: true })
-    .first()
-    .click();
-  await expect(page.getByRole("dialog")).toContainText("3 / 4 approved seats");
-  await page
-    .getByRole("button", { name: "Approve again", exact: true })
-    .click();
-  await expect(page.getByRole("dialog")).toContainText("4 / 4 approved seats");
   await page.getByRole("button", { name: "Edit plan", exact: true }).click();
   await page
     .getByLabel("Area / meeting place")
@@ -178,9 +166,9 @@ test("local hosting supports drafts, sample requests, approvals, capacity, edits
     "A different public cafe, Richmond",
   );
   await page
-    .getByRole("button", { name: "Manage requests", exact: true })
+    .getByRole("button", { name: "View attendees", exact: true })
     .click();
-  await expect(page.getByRole("dialog")).toContainText("4 / 4 approved seats");
+  await expect(page.getByRole("dialog")).toContainText("4 / 4 confirmed seats");
   await page
     .getByRole("button", { name: "Back to event", exact: true })
     .click();

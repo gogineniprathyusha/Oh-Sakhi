@@ -24,7 +24,7 @@ export function MyPlans({
       <div className="eyebrow">YOUR HER HOUR — OH SAKHI! JOURNEY</div>
       <h1 className="page-title">My plans</h1>
       <p className="section-intro">
-        Your upcoming experiences and join requests in one place.
+        Your upcoming experiences and RSVP history in one place.
       </p>
       {demo && (
         <p className="small muted">
@@ -34,12 +34,19 @@ export function MyPlans({
       <div className="statrow">
         {[
           ["going", "Going"],
-          ["pending", "Requests pending"],
+          ["cancelled", "Cancelled"],
           ["hosting", "Hosting"],
         ].map(([value, label]) => (
           <div className="stat" key={value}>
             <strong>
-              {plans.filter((event) => status(event) === value).length}
+              {
+                plans.filter((event) =>
+                  value === "cancelled"
+                    ? event.request_status === "cancelled" ||
+                      event.status === "cancelled"
+                    : status(event) === value && event.status !== "cancelled",
+                ).length
+              }
             </strong>
             <span>{label}</span>
           </div>

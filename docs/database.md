@@ -15,8 +15,10 @@ Apply files in filename order, once each. Do not edit migrations that have alrea
 | `202610170003_storage.sql`                         | Private photo/cover buckets and owned immutable paths                                                             |
 | `202610170004_organizer_workflow.sql`              | Immediate organiser publication, persistent publication after edits, organiser-only seat decisions, admin removal |
 | `202610170005_event_images.sql`                    | Service-only cover commits and restrictions that require server image validation                                  |
+| `202610170006_instant_rsvps.sql`                   | Immediate member reservations, retired approval API and safe legacy queue conversion                              |
+| `202610170007_rsvp_counter_fix.sql`                | Separate insert/update reservation paths and reconcile mismatched counters                                        |
 
-The historical foundation required administrator publication. **The organiser-workflow migration replaces that policy.** Apply all seven files for the current application and deploy the `event-image` function for covers. The frontend reads `meetup_directory` and uses registration RPCs; it does not write registration rows directly. Existing manual SQL Editor installations should apply only outstanding files.
+The historical foundation required administrator publication. **The organiser-workflow migration replaces that policy.** Apply all nine files for the current application and deploy the `event-image` function for covers. The frontend reads `meetup_directory` and uses registration RPCs; it does not write registration rows directly. Existing manual SQL Editor installations should apply only outstanding files.
 
 The first foundation migration classifies legacy events as drafts because they previously had no publication status. Their registrations are preserved. The organiser-workflow migration keeps those drafts private to avoid unexpectedly publishing unfinished content. Their organiser can publish them directly, with no admin review. Newly created events default to `published`.
 
@@ -35,31 +37,30 @@ Guests can read published events from active organisers, not private profiles or
 
 ## Final permission model
 
-Members create events under their own account. Organisers publish or save drafts directly, edit their own active events, decide attendance and cancel events. Edits to title, time, location, description, capacity or imagery keep publication and registrations intact and mark `details_updated_at`. Attendees see a details-changed notice; automated notifications are not implemented.
+Members create events under their own account. Organisers publish or save drafts directly, edit their own active events, view attendees and cancel events. Edits to title, time, location, description, capacity or imagery keep publication and registrations intact and mark `details_updated_at`. Attendees see a details-changed notice; automated notifications are not implemented.
 
-Organisers may approve pending/declined requests, decline a pending request, or revoke an existing approval. Approval obeys capacity and active-member checks. Existing requests may be decided after the submission deadline, but not after the event starts. A withdrawn request cannot be approved again until the member submits a new one. An admin can decide seats only when they are that event’s organiser.
+Members RSVP through `request_meetup` and receive a confirmed seat immediately, within capacity and before the registration deadline/start. The organiser and administrators do not approve or decline attendance. Members cancel their own RSVP and may reserve again when eligible. The old decision RPC is retained for migration history but execution by browser roles is revoked. See [instant-rsvps.md](instant-rsvps.md) for legacy status handling.
 
 Administrators can remove violations after publication, with a required reason. This sets `removed`, cancels outstanding requests/approved seats and writes an audit record. The event and registration history remain stored. Organisers cannot undo removal. Closed events cannot be reopened. Browser roles cannot hard-delete events. Administrator event-field access retained for moderation does not confer attendance-decision rights.
 
-Capacity is protected by transactions, locks on the event row, a maintained approved counter and a database CHECK. Approvals, capacity edits, cancellation and removal serialize against the same row. Pending requests reserve no seats. Direct registration writes, self-approval and ownership changes are denied.
+Capacity is protected by transactions, locks on the event row, a maintained approved counter and a database CHECK. Instant RSVPs, capacity edits, cancellation and removal serialize against the same row. Direct registration writes, self-approval and ownership changes are denied.
 
 ## Browser API contract
 
 Use the current authenticated session. Arguments are named exactly as shown:
 
-| API                       | Arguments                                                        | Access                                                           |
-| ------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `request_meetup`          | `p_meetup_id`                                                    | Active member, published event, before deadline/start            |
-| `withdraw_meetup_request` | `p_meetup_id`                                                    | Own pending/approved request                                     |
-| `decide_meetup_request`   | `p_meetup_id`, `p_user_id`, `p_decision` (`approved`/`declined`) | Event organiser only                                             |
-| `set_meetup_status`       | `p_meetup_id`, `p_status`                                        | Event organiser; draft/published/cancelled/completed transitions |
-| `moderate_meetup`         | `p_meetup_id`, `p_reason` (10–1000 characters)                   | Active administrator                                             |
-| `get_meetup_attendees`    | `p_meetup_id`                                                    | Organiser/admin; minimal display name and request state          |
-| `get_my_access`           | None                                                             | Current member’s status and trusted admin flag                   |
-| `set_member_interests`    | `p_interest_ids`                                                 | Current active member                                            |
-| `set_member_access`       | `p_user_id`, `p_status`, `p_reason`                              | Administrator                                                    |
-| `review_report`           | `p_report_id`, `p_status`, `p_note`                              | Administrator                                                    |
-| `admin_statistics`        | None                                                             | Administrator                                                    |
+| API                       | Arguments                                      | Access                                                           |
+| ------------------------- | ---------------------------------------------- | ---------------------------------------------------------------- |
+| `request_meetup`          | `p_meetup_id`                                  | Active member, immediate confirmed seat before deadline/start    |
+| `withdraw_meetup_request` | `p_meetup_id`                                  | Own confirmed RSVP                                               |
+| `set_meetup_status`       | `p_meetup_id`, `p_status`                      | Event organiser; draft/published/cancelled/completed transitions |
+| `moderate_meetup`         | `p_meetup_id`, `p_reason` (10–1000 characters) | Active administrator                                             |
+| `get_meetup_attendees`    | `p_meetup_id`                                  | Organiser/admin; minimal display name and request state          |
+| `get_my_access`           | None                                           | Current member’s status and trusted admin flag                   |
+| `set_member_interests`    | `p_interest_ids`                               | Current active member                                            |
+| `set_member_access`       | `p_user_id`, `p_status`, `p_reason`            | Administrator                                                    |
+| `review_report`           | `p_report_id`, `p_status`, `p_note`            | Administrator                                                    |
+| `admin_statistics`        | None                                           | Administrator                                                    |
 
 Own profile updates, event content updates/inserts, and report submissions use constrained table operations under RLS. `src/lib/community-api.ts` handles community data; `src/features/profile/profile-api.ts` handles the interest catalog and private profile photos. Event cover changes invoke the `event-image` function. Its `authorize_event_image(p_actor,p_event)` and `commit_event_image(p_actor,p_event,p_previous,p_path)` RPCs are executable only by `service_role`, after the endpoint verifies the caller. UI role flags control which buttons appear; PostgreSQL grants, RLS and RPC checks enforce access.
 

@@ -146,26 +146,16 @@ export async function saveEvent(
   return result.data!.id as string;
 }
 export async function requestEvent(id: string) {
-  check((await client().rpc("request_meetup", { p_meetup_id: id })).error);
+  const result = await client().rpc("request_meetup", { p_meetup_id: id });
+  check(result.error);
+  if (result.data?.status !== "approved")
+    throw Error(
+      "Your RSVP could not be confirmed. Please refresh and try again.",
+    );
 }
 export async function withdrawEvent(id: string) {
   check(
     (await client().rpc("withdraw_meetup_request", { p_meetup_id: id })).error,
-  );
-}
-export async function decideRequest(
-  id: string,
-  userId: string,
-  decision: "approved" | "declined",
-) {
-  check(
-    (
-      await client().rpc("decide_meetup_request", {
-        p_meetup_id: id,
-        p_user_id: userId,
-        p_decision: decision,
-      })
-    ).error,
   );
 }
 export async function setEventStatus(id: string, status: EventStatus) {

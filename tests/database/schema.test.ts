@@ -84,7 +84,7 @@ const queryAs = (name: string, sql: string, values: unknown[] = []) =>
   as(name, (client) => client.query(sql, values));
 const denied = (
   operation: () => Promise<unknown>,
-  pattern = /permission|access|required|policy|publish|another member|closed|full|request|inactive|cannot|supported|constraint|organiser/i,
+  pattern = /permission|access|required|policy|publish|another member|closed|full|request|RSVP|inactive|cannot|supported|constraint|organiser/i,
 ) =>
   assert.rejects(
     operation,
@@ -155,6 +155,7 @@ async function contendOnEvent(
   firstOperation: (client: pg.Client) => Promise<unknown>,
   secondActor: string,
   secondOperation: (client: pg.Client) => Promise<unknown>,
+  lockUsingOperation = false,
 ) {
   let release!: () => void, locked!: () => void;
   const gate = new Promise<void>((resolve) => {
@@ -165,6 +166,14 @@ async function contendOnEvent(
   });
   let secondPid: number | undefined;
   const first = as(firstActor, async (client) => {
+    if (lockUsingOperation) {
+      // Members cannot lock somebody else's event through raw table RLS.
+      // Their RSVP RPC takes the lock and keeps it until this transaction ends.
+      const result = await firstOperation(client);
+      locked();
+      await gate;
+      return result;
+    }
     await client.query("select id from public.meetups where id=$1 for update", [
       id,
     ]);
@@ -1793,6 +1802,354 @@ test("Stage C restricts cover writes to the validated server path while preservi
       )
     ).rowCount,
     1,
+  );
+});
+
+test("instant RSVP migration preserves seats, resolves legacy queues and enforces immediate race-safe reservations", async (t) => {
+  await owner.query(
+    "delete from private.rate_limits where operation='request_meetup'",
+  );
+  const legacy = await createEvent({ capacity: 2 });
+  await rpc("alice", "request_meetup", [legacy.id]);
+  await rpc("host", "decide_meetup_request", [
+    legacy.id,
+    ids.alice,
+    "approved",
+  ]);
+  await rpc("bea", "request_meetup", [legacy.id]);
+  await rpc("outsider", "request_meetup", [legacy.id]);
+  await owner.query(
+    "update public.meetup_requests set created_at=now()-interval '2 hours' where meetup_id=$1 and user_id=$2",
+    [legacy.id, ids.bea],
+  );
+  const declined = await createEvent();
+  await rpc("alice", "request_meetup", [declined.id]);
+  await rpc("host", "decide_meetup_request", [
+    declined.id,
+    ids.alice,
+    "declined",
+  ]);
+  const closedQueue = await createEvent();
+  await rpc("bea", "request_meetup", [closedQueue.id]);
+  await owner.query(
+    "update public.meetups set starts_at=now()-interval '1 day',registration_deadline=now()-interval '2 days' where id=$1",
+    [closedQueue.id],
+  );
+  await migrate(owner, ["202610170006_instant_rsvps.sql"]);
+  await t.test(
+    "legacy confirmed seats survive and pending requests resolve within capacity",
+    async () => {
+      const rows = (
+        await owner.query(
+          "select user_id,status from public.meetup_requests where meetup_id=$1",
+          [legacy.id],
+        )
+      ).rows;
+      assert.equal(
+        rows.find((r) => r.user_id === ids.alice).status,
+        "approved",
+      );
+      assert.equal(rows.find((r) => r.user_id === ids.bea).status, "approved");
+      assert.equal(
+        rows.find((r) => r.user_id === ids.outsider).status,
+        "cancelled",
+      );
+      assert.equal(
+        (
+          await owner.query(
+            "select approved_count from public.meetups where id=$1",
+            [legacy.id],
+          )
+        ).rows[0].approved_count,
+        2,
+      );
+      assert.equal(
+        (
+          await owner.query(
+            "select count(*)::integer n from public.meetup_requests where status='pending'",
+          )
+        ).rows[0].n,
+        0,
+      );
+      assert.equal(
+        (
+          await owner.query(
+            "select status from public.meetup_requests where meetup_id=$1",
+            [closedQueue.id],
+          )
+        ).rows[0].status,
+        "cancelled",
+      );
+      assert.equal(
+        (
+          await owner.query(
+            "select status from public.meetup_requests where meetup_id=$1",
+            [declined.id],
+          )
+        ).rows[0].status,
+        "declined",
+      );
+    },
+  );
+  await t.test(
+    "counter follow-up repairs the first instant-RSVP upsert behavior without changing reservations",
+    async () => {
+      const event = await createEvent({ capacity: 3 });
+      await rpc("alice", "request_meetup", [event.id]);
+      await rpc("alice", "withdraw_meetup_request", [event.id]);
+      await rpc("alice", "request_meetup", [event.id]);
+      assert.equal(
+        (
+          await owner.query(
+            "select approved_count from public.meetups where id=$1",
+            [event.id],
+          )
+        ).rows[0].approved_count,
+        2,
+      );
+      await migrate(owner, ["202610170007_rsvp_counter_fix.sql"]);
+      assert.equal(
+        (
+          await owner.query(
+            "select approved_count from public.meetups where id=$1",
+            [event.id],
+          )
+        ).rows[0].approved_count,
+        1,
+      );
+      assert.equal(
+        (
+          await owner.query(
+            "select count(*)::integer n from public.meetup_requests where meetup_id=$1 and status='approved'",
+            [event.id],
+          )
+        ).rows[0].n,
+        1,
+      );
+    },
+  );
+  await t.test(
+    "RSVP confirms immediately, duplicates consume no extra seat, and cancellation/rejoin preserve history",
+    async () => {
+      const event = await createEvent({ capacity: 2 });
+      for (let i = 0; i < 2; i++)
+        await rpc("alice", "request_meetup", [event.id]);
+      assert.equal(
+        (
+          await owner.query(
+            "select approved_count from public.meetups where id=$1",
+            [event.id],
+          )
+        ).rows[0].approved_count,
+        1,
+      );
+      assert.equal(
+        (
+          await queryAs(
+            "alice",
+            "select status,decided_by from public.meetup_requests where meetup_id=$1 and user_id=$2",
+            [event.id, ids.alice],
+          )
+        ).rows[0].status,
+        "approved",
+      );
+      await rpc("alice", "withdraw_meetup_request", [event.id]);
+      assert.equal(
+        (
+          await owner.query(
+            "select approved_count from public.meetups where id=$1",
+            [event.id],
+          )
+        ).rows[0].approved_count,
+        0,
+      );
+      await rpc("alice", "request_meetup", [event.id]);
+      assert.equal(
+        (
+          await owner.query(
+            "select approved_count from public.meetups where id=$1",
+            [event.id],
+          )
+        ).rows[0].approved_count,
+        1,
+      );
+      assert.deepEqual(
+        (
+          await owner.query(
+            "select status from public.registration_history where meetup_id=$1 and user_id=$2 order by id",
+            [event.id, ids.alice],
+          )
+        ).rows.map((r) => r.status),
+        ["approved", "cancelled", "approved"],
+      );
+      await rpc("alice", "request_meetup", [declined.id]);
+      assert.equal(
+        (
+          await owner.query(
+            "select status from public.meetup_requests where meetup_id=$1",
+            [declined.id],
+          )
+        ).rows[0].status,
+        "approved",
+      );
+    },
+  );
+  await t.test(
+    "approval RPC is retired and raw/self-spoofed writes remain blocked",
+    async () => {
+      await denied(() =>
+        rpc("host", "decide_meetup_request", [legacy.id, ids.bea, "declined"]),
+      );
+      await denied(() =>
+        rpc("admin", "decide_meetup_request", [legacy.id, ids.bea, "approved"]),
+      );
+      await denied(() =>
+        queryAs(
+          "alice",
+          "insert into public.meetup_requests(meetup_id,user_id) values($1,$2)",
+          [legacy.id, ids.outsider],
+        ),
+      );
+      await denied(() => rpc("host", "request_meetup", [legacy.id]));
+      await denied(() => rpc("guest", "request_meetup", [legacy.id]));
+      await denied(() => rpc("suspended", "request_meetup", [legacy.id]));
+    },
+  );
+  await t.test(
+    "simultaneous members compete for one last seat on the event lock",
+    async () => {
+      const event = await createEvent({ capacity: 2 });
+      await rpc("alice", "request_meetup", [event.id]);
+      const results = await contendOnEvent(
+        event.id,
+        "bea",
+        (client) =>
+          client.query("select public.request_meetup($1)", [event.id]),
+        "outsider",
+        (client) =>
+          client.query("select public.request_meetup($1)", [event.id]),
+        true,
+      );
+      assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+      assert.equal(results.filter((r) => r.status === "rejected").length, 1);
+      assert.equal(
+        (
+          await owner.query(
+            "select approved_count from public.meetups where id=$1",
+            [event.id],
+          )
+        ).rows[0].approved_count,
+        2,
+      );
+      assert.equal(
+        (
+          await owner.query(
+            "select count(*)::integer n from public.meetup_requests where meetup_id=$1 and status='approved'",
+            [event.id],
+          )
+        ).rows[0].n,
+        2,
+      );
+    },
+  );
+  await t.test(
+    "capacity edits and event cancellation serialize with instant RSVPs",
+    async () => {
+      const event = await createEvent({ capacity: 3 });
+      await rpc("alice", "request_meetup", [event.id]);
+      await rpc("bea", "request_meetup", [event.id]);
+      const results = await contendOnEvent(
+        event.id,
+        "outsider",
+        (client) =>
+          client.query("select public.request_meetup($1)", [event.id]),
+        "host",
+        (client) =>
+          client.query("update public.meetups set capacity=2 where id=$1", [
+            event.id,
+          ]),
+        true,
+      );
+      assert.equal(results[0].status, "fulfilled");
+      assert.equal(results[1].status, "rejected");
+      const other = await createEvent({ capacity: 2 });
+      const closure = await contendOnEvent(
+        other.id,
+        "alice",
+        (client) =>
+          client.query("select public.request_meetup($1)", [other.id]),
+        "host",
+        (client) =>
+          client.query("select public.set_meetup_status($1,'cancelled')", [
+            other.id,
+          ]),
+        true,
+      );
+      assert.ok(closure.every((r) => r.status === "fulfilled"));
+      assert.deepEqual(
+        (
+          await owner.query(
+            "select status,approved_count from public.meetups where id=$1",
+            [other.id],
+          )
+        ).rows[0],
+        { status: "cancelled", approved_count: 0 },
+      );
+    },
+  );
+  await t.test(
+    "deadlines, inactive hosts, drafts and closed events reject RSVPs",
+    async () => {
+      const event = await createEvent();
+      await queryAs(
+        "host",
+        "update public.meetups set registration_deadline=now()-interval '1 hour' where id=$1",
+        [event.id],
+      );
+      await denied(() => rpc("alice", "request_meetup", [event.id]), /closed/);
+      const draft = await createEvent();
+      await rpc("host", "set_meetup_status", [draft.id, "draft"]);
+      await denied(() => rpc("alice", "request_meetup", [draft.id]));
+      const inactive = await createEvent({}, "host2");
+      await owner.query(
+        "update private.member_access set status='suspended' where user_id=$1",
+        [ids.host2],
+      );
+      try {
+        await denied(() => rpc("alice", "request_meetup", [inactive.id]));
+      } finally {
+        await owner.query(
+          "update private.member_access set status='active' where user_id=$1",
+          [ids.host2],
+        );
+      }
+    },
+  );
+  await t.test(
+    "one transaction can switch member/organiser roles, rejoin and cancel without a stale counter",
+    async () => {
+      await owner.query("begin");
+      try {
+        await owner.query(`do $$
+      declare event_id uuid; count_now integer; r public.meetups;
+      begin
+        perform set_config('request.jwt.claim.sub','${ids.host}',true);
+        execute 'set local role authenticated';
+        insert into public.meetups(host_id,title,category,event_date,event_time,place,capacity,description)
+          values('${ids.host}','Transactional RSVP check','Coffee','2099-10-17','10:30','Richmond',2,'A temporary transactional reservation check.') returning id into event_id;
+        perform set_config('request.jwt.claim.sub','${ids.alice}',true);
+        perform public.request_meetup(event_id);perform public.request_meetup(event_id);
+        perform public.withdraw_meetup_request(event_id);perform public.request_meetup(event_id);
+        perform set_config('request.jwt.claim.sub','${ids.host}',true);
+        select * into r from public.set_meetup_status(event_id,'cancelled');
+        select approved_count into count_now from public.meetups where id=event_id;
+        if count_now<>0 then raise exception 'Stale cancellation counter: %, returned %',count_now,r.approved_count;end if;
+        execute 'reset role';
+      end $$;`);
+      } finally {
+        await owner.query("rollback");
+      }
+    },
   );
 });
 

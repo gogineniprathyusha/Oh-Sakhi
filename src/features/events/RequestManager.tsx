@@ -7,11 +7,6 @@ interface Props {
   busy: boolean;
   rows: Registration[];
   attendeeError: string;
-  decide: (
-    event: CommunityEvent,
-    member: string,
-    decision: "approved" | "declined",
-  ) => void;
   addSample: () => void;
   edit: () => void;
   back: () => void;
@@ -22,7 +17,6 @@ export function RequestManager({
   busy,
   rows,
   attendeeError,
-  decide,
   addSample,
   edit,
   back,
@@ -30,47 +24,25 @@ export function RequestManager({
   return (
     <>
       <p className="section-intro">
-        {current.capacity - seats(current)} / {current.capacity} approved seats
+        {current.capacity - seats(current)} / {current.capacity} confirmed seats
       </p>
       <p className="small muted">
-        Only the event organiser decides who attends. Pending requests do not
-        reserve seats.
+        RSVPs are confirmed immediately while seats are available. Members can
+        cancel their own RSVP to release a seat.
       </p>
       {attendeeError && <p role="alert">{attendeeError}</p>}
-      {!rows.length && <p>No requests yet.</p>}
+      {!rows.length && <p>No RSVPs yet.</p>}
       {rows.map((row) => (
         <div className="request-row" key={row.user_id}>
           <div>
             <strong>{row.display_name ?? row.user_id}</strong>
-            <small>{row.status}</small>
-          </div>
-          <div className="detail-actions">
-            {!isClosed(current, demo) &&
-              current.host === "You" &&
-              row.status !== "cancelled" && (
-                <>
-                  {row.status !== "approved" && (
-                    <button
-                      className="btn btn-small"
-                      disabled={busy || seats(current) === 0}
-                      onClick={() => decide(current, row.user_id, "approved")}
-                    >
-                      {row.status === "declined" ? "Approve again" : "Approve"}
-                    </button>
-                  )}
-                  {row.status !== "declined" && (
-                    <button
-                      className="btn btn-outline btn-small"
-                      disabled={busy}
-                      onClick={() => decide(current, row.user_id, "declined")}
-                    >
-                      {row.status === "approved"
-                        ? "Revoke approval"
-                        : "Decline"}
-                    </button>
-                  )}
-                </>
-              )}
+            <small>
+              {row.status === "approved"
+                ? "Confirmed"
+                : row.status === "pending"
+                  ? "Not confirmed"
+                  : "Not attending"}
+            </small>
           </div>
         </div>
       ))}
@@ -80,7 +52,7 @@ export function RequestManager({
           disabled={busy || seats(current) === 0}
           onClick={addSample}
         >
-          Add sample request
+          Add sample attendee
         </button>
       )}
       {current.host === "You" &&

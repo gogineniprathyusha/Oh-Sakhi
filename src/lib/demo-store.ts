@@ -45,7 +45,7 @@ export const status = (event: CommunityEvent) =>
           ? "declined"
           : "none";
 
-// Pending requests don't reserve seats. Only approval changes capacity.
+// Confirmed RSVPs consume capacity immediately.
 export const seats = (event: CommunityEvent) =>
   Math.max(
     0,
@@ -56,13 +56,16 @@ export const seats = (event: CommunityEvent) =>
 export function requestToJoin(event: CommunityEvent) {
   if (
     (event.status && event.status !== "published") ||
-    event.declined?.includes("demo") ||
-    status(event) !== "none" ||
+    event.host === "You" ||
+    status(event) === "going" ||
     seats(event) === 0
   )
     return false;
-  event.pending.push("demo");
-  event.request_status = "pending";
+  event.pending = event.pending.filter((id) => id !== "demo");
+  if (event.declined)
+    event.declined = event.declined.filter((id) => id !== "demo");
+  event.approved.push("demo");
+  event.request_status = "approved";
   return true;
 }
 
@@ -70,34 +73,6 @@ export function withdraw(event: CommunityEvent) {
   event.request_status = "cancelled";
   event.approved = event.approved.filter((id) => id !== "demo");
   event.pending = event.pending.filter((id) => id !== "demo");
-}
-
-export function approve(event: CommunityEvent, member: string) {
-  if (event.host !== "You" || (event.status && event.status !== "published"))
-    return false;
-  if (event.approved.includes(member)) return true;
-  if (
-    (!event.pending.includes(member) && !event.declined?.includes(member)) ||
-    seats(event) === 0
-  )
-    return false;
-  event.pending = event.pending.filter((id) => id !== member);
-  event.declined = event.declined?.filter((id) => id !== member);
-  if (!event.approved.includes(member)) event.approved.push(member);
-  return true;
-}
-
-export function decline(event: CommunityEvent, member: string) {
-  if (
-    event.host !== "You" ||
-    (event.status && event.status !== "published") ||
-    (!event.pending.includes(member) && !event.approved.includes(member))
-  )
-    return false;
-  event.pending = event.pending.filter((id) => id !== member);
-  event.approved = event.approved.filter((id) => id !== member);
-  event.declined = [...new Set([...(event.declined ?? []), member])];
-  return true;
 }
 
 export function today() {
@@ -161,7 +136,17 @@ function validState(value: unknown): value is DemoState {
 export function loadState(storage?: StorageLike) {
   try {
     const data = JSON.parse(storage?.getItem?.(STORE) ?? "null");
-    return validState(data) ? data : initialState();
+    if (!validState(data)) return initialState();
+    for (const event of data.events) {
+      for (const id of event.pending) {
+        if (event.approved.includes(id)) continue;
+        if ((!event.status || event.status === "published") && seats(event) > 0)
+          event.approved.push(id);
+        else if (id === "demo") event.request_status = "cancelled";
+      }
+      event.pending = [];
+    }
+    return data;
   } catch {
     return initialState();
   }

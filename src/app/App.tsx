@@ -26,8 +26,6 @@ import { authCallback, supabase } from "../lib/supabase.ts";
 import { withoutAuthCallback } from "../lib/auth-callback.ts";
 import * as api from "../lib/community-api.ts";
 import {
-  approve,
-  decline,
   initialState,
   loadState,
   requestToJoin,
@@ -190,16 +188,15 @@ export function App() {
       .catch((error: unknown) => {
         if (active)
           setAttendeeError(
-            error instanceof Error ? error.message : "Unable to load requests.",
+            error instanceof Error
+              ? error.message
+              : "Unable to load attendees.",
           );
       });
     return () => {
       active = false;
     };
   }, [demo, manageId]);
-  async function reloadRequests(id: string) {
-    setRegistrations(await api.attendees(id));
-  }
   const saveEvent = (input: EventInput) =>
     void run(async () => {
       if (demo) {
@@ -237,7 +234,7 @@ export function App() {
       setPage("myplans");
       notify(
         current
-          ? "Plan updated — existing requests are preserved."
+          ? "Plan updated — existing RSVPs are preserved."
           : demo
             ? "Demo plan saved"
             : input.status === "draft"
@@ -290,7 +287,7 @@ export function App() {
       if (demo)
         updateDemo(event.id, (item) => {
           if (!requestToJoin(item))
-            throw Error("This plan is full or you already have a request.");
+            throw Error("This plan is full or you already have a spot.");
         });
       else {
         await api.requestEvent(event.id);
@@ -298,8 +295,8 @@ export function App() {
       }
       notify(
         demo
-          ? "Demo request saved. No host has been contacted."
-          : "Request sent to the organiser",
+          ? "Demo RSVP confirmed. No real booking was made."
+          : "Your spot is confirmed",
       );
     });
   const withdrawRequest = (event: CommunityEvent) =>
@@ -309,40 +306,12 @@ export function App() {
         await api.withdrawEvent(event.id);
         await live.refresh();
       }
-      notify("Request withdrawn");
-    });
-  const decide = (
-    event: CommunityEvent,
-    member: string,
-    decision: "approved" | "declined",
-  ) =>
-    void run(async () => {
-      if (demo)
-        updateDemo(event.id, (item) => {
-          if (
-            !(decision === "approved"
-              ? approve(item, member)
-              : decline(item, member))
-          )
-            throw Error(
-              "Unable to change this request. Check available seats.",
-            );
-        });
-      else {
-        await api.decideRequest(event.id, member, decision);
-        await live.refresh();
-        await reloadRequests(event.id);
-      }
-      notify(
-        decision === "approved"
-          ? "Seat approved"
-          : "Request declined; any approved seat has been released",
-      );
+      notify("RSVP cancelled; your seat has been released");
     });
   const cancel = (event: CommunityEvent) => {
     if (
       !window.confirm(
-        "Cancel this plan? Pending requests and approved seats will be cancelled. Its history will be kept.",
+        "Cancel this plan? All RSVPs will be cancelled. Its history will be kept.",
       )
     )
       return;
@@ -362,7 +331,7 @@ export function App() {
     });
   };
   const reset = () => {
-    if (window.confirm("Reset your demo profile, plans and requests?")) {
+    if (window.confirm("Reset your demo profile, plans and RSVPs?")) {
       store(initialState());
       notify("Demo data reset");
     }
@@ -581,7 +550,7 @@ export function App() {
                 : dialog.kind === "edit"
                   ? "Edit your plan"
                   : dialog.kind === "manage"
-                    ? "Manage requests"
+                    ? "Attendees"
                     : dialog.kind === "report"
                       ? "Report this event"
                       : dialog.kind === "moderate"
@@ -677,7 +646,6 @@ export function App() {
                 busy={busy}
                 rows={rows}
                 attendeeError={attendeeError}
-                decide={decide}
                 edit={() => open({ kind: "edit", id: current.id })}
                 back={() => open({ kind: "details", id: current.id })}
                 addSample={() =>
@@ -689,7 +657,7 @@ export function App() {
                       ...(item.declined ?? []),
                     ];
                     while (ids.includes(`Sample member ${n}`)) n++;
-                    item.pending.push(`Sample member ${n}`);
+                    item.approved.push(`Sample member ${n}`);
                   })
                 }
               />
@@ -721,9 +689,9 @@ export function App() {
           ) : (
             <form onSubmit={submitModeration}>
               <p>
-                Remove this event from discovery and cancel outstanding requests
-                and seats. Its history will be preserved, and its organiser
-                cannot republish it.
+                Remove this event from discovery and cancel outstanding RSVPs.
+                Its history will be preserved, and its organiser cannot
+                republish it.
               </p>
               <div className="field">
                 <label htmlFor="removal-reason">

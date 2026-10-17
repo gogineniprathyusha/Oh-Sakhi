@@ -7,7 +7,6 @@ import {
   saveState,
   requestToJoin,
   withdraw,
-  approve,
   seats,
   status,
 } from "../../src/lib/demo-store.ts";
@@ -23,32 +22,35 @@ test("reset creates fresh sample data without retaining profile or RSVP edits", 
   assert.equal(fresh.profile.name, "Sakhi Member");
 });
 
-test("duplicate join requests are rejected and pending requests do not consume approved seats", () => {
+test("RSVPs confirm immediately and duplicate joins do not consume another seat", () => {
   const event = initialState().events[1];
   const before = seats(event);
   assert.equal(requestToJoin(event), true);
-  assert.equal(status(event), "pending");
+  assert.equal(status(event), "going");
   assert.equal(requestToJoin(event), false);
-  assert.equal(event.pending.length, 1);
-  assert.equal(seats(event), before);
+  assert.equal(event.pending.length, 0);
+  assert.equal(seats(event), before - 1);
   withdraw(event);
   assert.equal(status(event), "none");
 });
 
-test("only a demo host can approve and approvals cannot exceed capacity", () => {
-  const event = initialState().events[0];
-  event.pending = ["Sample member"];
-  assert.equal(approve(event, "Sample member"), false);
-  event.host = "You";
+test("full, closed and own demo events cannot be joined", () => {
+  const event = initialState().events[1];
+  assert.equal(requestToJoin({ ...event, host: "You" }), false);
+  assert.equal(requestToJoin({ ...event, status: "cancelled" }), false);
+  assert.equal(requestToJoin({ ...event, capacity: event.attendees }), false);
+});
+
+test("legacy demo pending requests become confirmed only within capacity", () => {
+  const state = initialState(),
+    event = state.events[1];
   event.capacity = 7;
-  assert.equal(approve(event, "Sample member"), true);
-  assert.equal(seats(event), 0);
-  event.pending.push("Another member");
-  assert.equal(approve(event, "Another member"), false);
-  assert.equal(
-    requestToJoin({ ...event, host: "Anika", approved: [], attendees: 7 }),
-    false,
-  );
+  event.pending = ["demo", "Another member"];
+  const restored = loadState({ getItem: () => JSON.stringify(state) })
+    .events[1];
+  assert.equal(restored.pending.length, 0);
+  assert.deepEqual(restored.approved, ["demo"]);
+  assert.equal(seats(restored), 0);
 });
 
 test("withdrawing a confirmed demo RSVP releases exactly one seat", () => {

@@ -58,9 +58,9 @@ export function EventDetails({
           {current.registration_deadline && (
             <>
               <br />
-              Request by{" "}
+              RSVP by{" "}
               {deadlineLabel(current.registration_deadline, current.timezone)}.
-              Requests need organiser approval.
+              RSVPs are confirmed immediately while seats are available.
             </>
           )}
         </p>
@@ -105,7 +105,7 @@ export function EventDetails({
         {isOrganizer ? (
           <>
             <button className="btn" onClick={manage}>
-              Manage requests
+              View attendees
             </button>
             {["draft", "published"].includes(current.status ?? "published") && (
               <>
@@ -127,27 +127,21 @@ export function EventDetails({
               </button>
             )}
           </>
-        ) : status(current) === "going" || status(current) === "pending" ? (
+        ) : status(current) === "going" ? (
           <>
             <p role="status">
-              {status(current) === "pending"
-                ? demo
-                  ? "Your demo request is pending. No host has been contacted."
-                  : "Your request is waiting for the organiser’s decision."
-                : "You have an approved spot."}
+              {demo
+                ? "Your demo spot is confirmed. No real booking was made."
+                : "Your spot is confirmed."}
             </p>
             <button
               className="btn btn-outline"
               disabled={busy}
               onClick={() => withdrawRequest(current)}
             >
-              {status(current) === "going"
-                ? "Cancel my spot"
-                : "Withdraw request"}
+              Cancel my spot
             </button>
           </>
-        ) : current.declined?.includes("demo") ? (
-          <p>Your request was declined. The organiser can reconsider it.</p>
         ) : (
           <button
             className="btn"
@@ -157,15 +151,15 @@ export function EventDetails({
             onClick={() => request(current)}
           >
             {!canRequest(current, demo)
-              ? "Requests closed"
+              ? "RSVPs closed"
               : seats(current) === 0
                 ? "This plan is full"
-                : "Request to join →"}
+                : "RSVP →"}
           </button>
         )}
         {current.request_status === "cancelled" && !isClosed(current, demo) && (
           <p className="small muted">
-            You withdrew your previous request. You can request again while
+            Your previous RSVP is not active. You can RSVP again while
             registration is open.
           </p>
         )}

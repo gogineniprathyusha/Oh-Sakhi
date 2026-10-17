@@ -24,7 +24,7 @@ export function availability(event: CommunityEvent, now = Date.now()) {
       ? "In progress"
       : "Past event";
   if (Date.parse(event.registration_deadline ?? "") <= now)
-    return "Requests closed";
+    return "RSVPs closed";
   if (
     (event.approved_total ?? event.attendees + event.approved.length) >=
     event.capacity
