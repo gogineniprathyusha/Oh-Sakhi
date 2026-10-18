@@ -100,6 +100,7 @@ test("guests must sign in to edit profiles and logout removes private data", asy
   await page.getByRole("button", { name: "Log in", exact: true }).click();
 
   await page.locator('.sidebar [data-page="profile"]').click();
+  await page.getByRole("button", { name: "Edit profile", exact: true }).click();
   await expect(page.locator("#profile-name")).toHaveValue("Real account");
   await expect(page.locator("#profile-bio")).toHaveValue(
     "Stored in the test backend",
@@ -111,6 +112,7 @@ test("guests must sign in to edit profiles and logout removes private data", asy
   expect(writes[0].display_name).toBe("Updated account");
   await page.reload();
   await page.locator('.sidebar [data-page="profile"]').click();
+  await page.getByRole("button", { name: "Edit profile", exact: true }).click();
   await expect(page.locator("#profile-name")).toHaveValue("Updated account");
   await page.getByRole("button", { name: "Log out", exact: true }).click();
   await expect(

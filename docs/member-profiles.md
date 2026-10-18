@@ -2,16 +2,23 @@
 
 > Update: browser demo mode has been removed. Signed-out visitors now browse published Supabase events and sign in for account actions. Demo references below describe earlier-stage behavior and verification.
 
-
-The original Stage B editor added no migrations. Public profile photos now require the additive `202610180001_public_profile_photos.sql` migration; keep all previously applied migrations unchanged.
+The original Stage B editor added no migrations. The October 18 custom-interest editor adds `202610180006_custom_profile_interests.sql` (local implementation; hosted rollout pending). Public profile photos now require the additive `202610180001_public_profile_photos.sql` migration; keep all previously applied migrations unchanged.
 
 ## Member experience
 
-Signed-in members can edit their display name, bio, city and optional neighborhood, select up to twelve interests from `public.interests`, and upload, replace or remove their own photo. The header and profile show the saved photo; initials remain available if a photo cannot load. Failed saves preserve form drafts. Changing a photo does not reset unsaved text or interests.
+Signed-in members see their saved profile summary, including interest tags. **Edit profile**, at the top right of the profile box, opens the text fields, catalog checkboxes, comma-separated **Other interests** input and photo controls. Members can edit their display name, bio, city and optional neighborhood, select or enter up to twelve interests in total, and upload, replace or remove their own photo. **Save profile** returns to the summary only after a successful save; **Cancel** discards unsaved text/interest edits. Photo changes save separately when performed. The header and profile show the saved photo; initials remain available if a photo cannot load. Failed saves preserve form drafts. Changing a photo does not reset unsaved text or interests.
 
-Interest choices come from the database, including migrated legacy choices. A single update of the owned profile writes text fields and the interests array; the existing database trigger validates choices and synchronizes `member_interests` in the same transaction. A catalog failure preserves saved interests and offers a retry.
+Interest choices come from the database, including migrated legacy choices. Custom names are trimmed and deduplicated without regard to case; catalog matches use the catalog spelling. Each new custom name allows up to 60 characters (longer legacy catalog choices remain usable), with at most twelve unique interests across both controls. A single update of the owned profile writes text fields and the interests array. The new migration validates and normalizes that array before writing; catalog matches still synchronize `member_interests` in the same transaction. Custom names stay in the protected profile array and are never inserted into the publicly readable catalog. Existing RLS and grants are preserved. A catalog failure preserves all saved interests and offers a retry; interest editing becomes available after the catalog loads, while other fields remain editable.
 
-Demo profiles keep their browser-only editor. They do not upload photos, contact Storage, or transfer data into real accounts.
+There is no demo profile editor.
+
+## Custom-interest rollout — October 18, 2026
+
+This work stays on `feature/hh-brand-refresh` at the owner’s request. Apply only `supabase/migrations/202610180006_custom_profile_interests.sql` once, after reconciling the shared project’s migration state, before deploying the updated frontend. The previous catalog-only trigger rejects new custom names until this migration is applied. No Edge Function or email configuration change is required. Existing profile rows and catalog links are untouched by migration application. The browser’s new summary is presentation only; profile data remains private.
+
+Local verification covers clean setup, populated upgrades, trimming/deduplication, private catalog handling, cross-member/anonymous access, invalid names and combined limits with real disposable PostgreSQL. Browser verification uses intercepted service fixtures, including mobile WebKit; it is separate from hosted persistence. No shared-project SQL, hosted member writes or emails have been performed for this update.
+
+Validation passed: `npm run check`, all 39 unit tests, all 59 isolated PostgreSQL tests, production build and `git diff --check`. The 32 profile/auth/photo browser checks passed in Chrome/mobile WebKit; after the legacy-compatibility adjustment, all 10 focused custom-interest checks passed again, including accessibility scans and desktop/mobile screenshot review. These overlapping browser runs are fixture checks, not live Supabase verification.
 
 ## Public profile photos
 

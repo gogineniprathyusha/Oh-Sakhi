@@ -16,7 +16,10 @@ body {
     radial-gradient(ellipse at 98% 75%, #f8c6cd55 0, transparent 34%);
 }
 .sidebar,
-.topbar,
+.topbar {
+  background: linear-gradient(135deg, #fff4f1, #ffefed);
+  border-color: var(--line);
+}
 .mobile-nav {
   background: #fffbf8;
   border-color: var(--line);

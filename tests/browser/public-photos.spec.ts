@@ -140,6 +140,7 @@ test("replacing and removing a photo updates owned event avatars without changin
     ),
   ).toBe(true);
   await page.locator('.sidebar [data-page="profile"]').click();
+  await page.getByRole("button", { name: "Edit profile", exact: true }).click();
   await page.getByRole("button", { name: "Remove photo", exact: true }).click();
   await expect(page.locator("#toast")).toHaveText("Profile photo removed");
   await page.locator('.sidebar [data-page="host"]').click();

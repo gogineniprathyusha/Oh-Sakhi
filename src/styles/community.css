@@ -2,6 +2,34 @@
   border: 0;
   margin-bottom: 14px;
 }
+.profile-card-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.profile-card-header .profile-heading {
+  min-width: 0;
+  margin-bottom: 0;
+}
+.profile-heading > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.profile-edit {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+}
+@media (max-width: 600px) {
+  .profile-card-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .profile-edit {
+    grid-column: 1;
+  }
+}
 .profile-heading .avatar {
   width: 60px;
   height: 60px;
@@ -173,6 +201,30 @@
 .interest-option input {
   accent-color: var(--wine);
   margin: 0;
+}
+.custom-interests {
+  margin-top: 18px;
+}
+.profile-summary p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.profile-interest-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 22px;
+}
+.profile-interest-tags li {
+  max-width: 100%;
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--paper);
+  color: var(--wine);
+  overflow-wrap: anywhere;
 }
 .visually-hidden {
   position: absolute;

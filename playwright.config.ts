@@ -19,6 +19,7 @@ export default defineConfig({
         "**/branding.spec.ts",
         "**/public-photos.spec.ts",
         "**/email-links.spec.ts",
+        "**/profile-interests.spec.ts",
       ],
       use: { ...devices["iPhone 13"] },
     },

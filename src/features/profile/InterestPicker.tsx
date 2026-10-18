@@ -1,13 +1,107 @@
 import { useEffect, useState } from "react";
 import { loadInterests, type Interest } from "./profile-api.ts";
+import { interestError, normalizeInterests } from "./interests.ts";
+
+function InterestChoices({
+  choices,
+  selected,
+  change,
+}: {
+  choices: Interest[];
+  selected: string[];
+  change: (names: string[]) => void;
+}) {
+  const catalog = choices.map((choice) => choice.name);
+  const isCatalog = (name: string) =>
+    catalog.some((value) => value.toLowerCase() === name.toLowerCase());
+  const [presets, setPresets] = useState(() => selected.filter(isCatalog));
+  const [custom, setCustom] = useState(() =>
+    selected.filter((name) => !isCatalog(name)).join(", "),
+  );
+  const error = interestError(selected, catalog);
+  function updateCustom(value: string) {
+    setCustom(value);
+    change(normalizeInterests([...presets, ...value.split(",")], catalog));
+  }
+  function toggle(name: string) {
+    const checked = selected.some(
+      (value) => value.toLowerCase() === name.toLowerCase(),
+    );
+    if (checked) {
+      setPresets(
+        presets.filter((value) => value.toLowerCase() !== name.toLowerCase()),
+      );
+      setCustom(
+        custom
+          .split(",")
+          .filter((value) => value.trim().toLowerCase() !== name.toLowerCase())
+          .join(","),
+      );
+      change(
+        selected.filter((value) => value.toLowerCase() !== name.toLowerCase()),
+      );
+    } else {
+      setPresets([...presets, name]);
+      change(normalizeInterests([...selected, name], catalog));
+    }
+  }
+  return (
+    <>
+      <div className="interest-options">
+        {choices.map((choice) => {
+          const checked = selected.some(
+            (value) => value.toLowerCase() === choice.name.toLowerCase(),
+          );
+          return (
+            <label
+              className={`interest-option ${checked ? "selected" : ""}`}
+              key={choice.id}
+            >
+              <input
+                type="checkbox"
+                checked={checked}
+                disabled={!checked && selected.length >= 12}
+                onChange={() => toggle(choice.name)}
+              />
+              {choice.name}
+            </label>
+          );
+        })}
+      </div>
+      <div className="field custom-interests">
+        <label htmlFor="profile-other-interests">Other interests</label>
+        <p id="profile-interest-help" className="small muted">
+          Can’t find yours? Add interests separated by commas, up to 60
+          characters each. They count toward the same 12-interest limit.
+        </p>
+        <input
+          id="profile-other-interests"
+          value={custom}
+          onChange={(event) => updateCustom(event.target.value)}
+          maxLength={1500}
+          placeholder="e.g. Gardening, Photography"
+          aria-describedby={`profile-interest-help${error ? " profile-interest-error" : ""}`}
+          aria-invalid={Boolean(error)}
+        />
+        {error && (
+          <p id="profile-interest-error" role="alert">
+            {error}
+          </p>
+        )}
+      </div>
+    </>
+  );
+}
 export function InterestPicker({
   selected,
   change,
   disabled,
+  catalogLoaded,
 }: {
   selected: string[];
   change: (names: string[]) => void;
   disabled: boolean;
+  catalogLoaded: (names: string[]) => void;
 }) {
   const [choices, setChoices] = useState<Interest[] | null>(null),
     [error, setError] = useState(""),
@@ -18,7 +112,10 @@ export function InterestPicker({
     setChoices(null);
     void loadInterests()
       .then((rows) => {
-        if (active) setChoices(rows);
+        if (active) {
+          setChoices(rows);
+          catalogLoaded(rows.map((row) => row.name));
+        }
       })
       .catch((error: unknown) => {
         if (active)
@@ -31,21 +128,7 @@ export function InterestPicker({
     return () => {
       active = false;
     };
-  }, [attempt]);
-  const unknown = choices
-    ? selected.filter(
-        (name) =>
-          !choices.some(
-            (choice) => choice.name.toLowerCase() === name.toLowerCase(),
-          ),
-      )
-    : [];
-  const toggle = (name: string) =>
-    change(
-      selected.some((value) => value.toLowerCase() === name.toLowerCase())
-        ? selected.filter((value) => value.toLowerCase() !== name.toLowerCase())
-        : [...selected, name],
-    );
+  }, [attempt, catalogLoaded]);
   return (
     <fieldset className="interest-picker" disabled={disabled}>
       <legend>Interests</legend>
@@ -71,33 +154,11 @@ export function InterestPicker({
         </p>
       )}
       {choices && (
-        <div className="interest-options">
-          {choices.map((choice) => {
-            const checked = selected.some(
-              (value) => value.toLowerCase() === choice.name.toLowerCase(),
-            );
-            return (
-              <label
-                className={`interest-option ${checked ? "selected" : ""}`}
-                key={choice.id}
-              >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  disabled={!checked && selected.length >= 12}
-                  onChange={() => toggle(choice.name)}
-                />
-                {choice.name}
-              </label>
-            );
-          })}
-        </div>
-      )}
-      {unknown.length > 0 && (
-        <p className="small muted">
-          Previously saved interests: {unknown.join(", ")}. These will be
-          preserved.
-        </p>
+        <InterestChoices
+          choices={choices}
+          selected={selected}
+          change={change}
+        />
       )}
     </fieldset>
   );

@@ -264,7 +264,7 @@ export function App() {
       );
     });
   const saveProfile = (profile: MemberProfile) =>
-    void run(async () => {
+    run(async () => {
       if (!user) {
         login();
         return;
@@ -272,7 +272,7 @@ export function App() {
       await api.saveProfile(user.id, profile);
       await live.refresh();
       notify("Profile saved");
-    });
+    }, true);
   const changeProfilePhoto = async (image: Blob | null) => {
     if (!user || !live.data)
       throw Error("Log in to manage your profile photo.");

@@ -11,6 +11,9 @@ The root React application adopts the owner-supplied `her-hobby-hour/` login and
 - Login, signup, reset and password-update views retain their handlers, labelled fields, notices, disabled states and legal links. Discovery retains real events, filters, covers, organiser photos and registration labels. Hero hosting actions use the existing login gate and event form.
 - Opening login from the community now adds one browser-history entry at the same URL. Browser Back returns to discovery; Forward and reload restore the current login/signup/reset screen. Switching auth modes updates that entry, and Back to experiences consumes it. Direct recovery links are cleaned in place rather than navigating to an unrelated prior page. Only the screen name is stored in history, never form values or credentials.
 - Desktop sidebar and mobile navigation retain all current destinations and permissions. Shared controls, dialogs and member pages inherit the theme without a workflow redesign.
+- The sidebar and top bar use a very light warm blush gradient (`#FFF4F1` to `#FFEFED`) to soften their transition into the page background. Text, active navigation styling and control geometry are retained.
+
+Navigation tint verification on October 18: TypeScript/ESLint, **37 fixture-backed Chrome/mobile WebKit checks** covering branding, discovery, keyboard navigation and sampled accessibility, production build and formatting checks passed. Desktop/mobile screenshots were reviewed. No hosted changes or deployment were performed.
 
 ## Login placement refinement
 

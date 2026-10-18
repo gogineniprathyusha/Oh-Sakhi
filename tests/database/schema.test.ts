@@ -4634,6 +4634,167 @@ test("seat cancellation emails upgrade safely, follow member intent and preserve
   await close(db);
 });
 
+test("custom profile interests upgrade preserves existing data and enforces private bounded writes", async () => {
+  const database = "custom_interests_upgrade";
+  await cluster.createDatabase(database);
+  const db = await connection(database);
+  await db.query(schemaFixture);
+  await migrate(
+    db,
+    (await readdir(migrationDir))
+      .filter((file) => file.endsWith(".sql") && file < "202610180006")
+      .sort(),
+  );
+  for (const name of ["alice", "bea"]) {
+    await db.query("insert into auth.users(id,email) values($1,$2)", [
+      ids[name],
+      `${name}@example.test`,
+    ]);
+  }
+  const legacy = "Legacy, " + "x".repeat(70);
+  await db.query(
+    "insert into public.interests(id,name) values('legacy-long',$1)",
+    [legacy],
+  );
+  await db.query(
+    "update public.profiles set bio='Existing biography', interests=array['Books','Coffee',$2] where id=$1",
+    [ids.alice, legacy],
+  );
+  const before = (await db.query("select * from public.profiles order by id"))
+    .rows;
+  const links = (
+    await db.query(
+      "select * from public.member_interests order by member_id,interest_id",
+    )
+  ).rows;
+  await migrate(db, ["202610180006_custom_profile_interests.sql"]);
+  assert.deepEqual(
+    (await db.query("select * from public.profiles order by id")).rows,
+    before,
+  );
+  assert.deepEqual(
+    (
+      await db.query(
+        "select * from public.member_interests order by member_id,interest_id",
+      )
+    ).rows,
+    links,
+  );
+  const write = (names: unknown) =>
+    as(
+      "alice",
+      (client) =>
+        client.query(
+          "update public.profiles set interests=$1 where id=$2 returning interests",
+          [names, ids.alice],
+        ),
+      database,
+    );
+  assert.deepEqual((await write(["Books", legacy])).rows[0].interests, [
+    "Books",
+    legacy,
+  ]);
+  assert.deepEqual(
+    (await write([" coffee ", "Gardening", "gardening", " Astronomy "])).rows[0]
+      .interests,
+    ["Coffee", "Gardening", "Astronomy"],
+  );
+  assert.deepEqual(
+    (
+      await db.query(
+        "select interest_id from public.member_interests where member_id=$1",
+        [ids.alice],
+      )
+    ).rows,
+    [{ interest_id: "coffee" }],
+  );
+  assert.equal(
+    (
+      await as(
+        "guest",
+        (client) =>
+          client.query(
+            "select name from public.interests where name in ('Gardening','Astronomy')",
+          ),
+        database,
+      )
+    ).rowCount,
+    0,
+  );
+  assert.equal(
+    (
+      await as(
+        "bea",
+        (client) =>
+          client.query("select interests from public.profiles where id=$1", [
+            ids.alice,
+          ]),
+        database,
+      )
+    ).rowCount,
+    0,
+  );
+  assert.equal(
+    (
+      await as(
+        "bea",
+        (client) =>
+          client.query(
+            "update public.profiles set interests=array['Stolen'] where id=$1",
+            [ids.alice],
+          ),
+        database,
+      )
+    ).rowCount,
+    0,
+  );
+  await assert.rejects(
+    as(
+      "guest",
+      (client) =>
+        client.query(
+          "update public.profiles set interests=array['Stolen'] where id=$1",
+          [ids.alice],
+        ),
+      database,
+    ),
+    /permission/,
+  );
+  for (const invalid of [
+    Array.from({ length: 13 }, (_, i) => `Hobby ${i}`),
+    ["a".repeat(61)],
+    [""],
+    [null],
+    null,
+    [["Coffee", "Books"]],
+    ["Hidden\nline"],
+    ["Comma,name"],
+  ]) {
+    await assert.rejects(write(invalid), /interest|plain text/i);
+  }
+  assert.deepEqual(
+    (
+      await db.query("select interests from public.profiles where id=$1", [
+        ids.alice,
+      ])
+    ).rows[0].interests,
+    ["Coffee", "Gardening", "Astronomy"],
+  );
+  const twelve = Array.from({ length: 12 }, (_, i) => `Custom hobby ${i}`);
+  assert.deepEqual((await write(twelve)).rows[0].interests, twelve);
+  assert.deepEqual((await write([])).rows[0].interests, []);
+  assert.equal(
+    (
+      await db.query(
+        "select * from public.member_interests where member_id=$1",
+        [ids.alice],
+      )
+    ).rowCount,
+    0,
+  );
+  await close(db);
+});
+
 test("all migrations also apply to an empty project with immediate member publication", async () => {
   await cluster.createDatabase("current_fresh");
   const client = await connection("current_fresh");
@@ -4662,6 +4823,19 @@ test("all migrations also apply to an empty project with immediate member public
   );
   assert.equal(result.rows[0].status, "published");
   assert.equal(result.rows[0].approved_count, 0);
+  const interests = await as(
+    "host",
+    (db) =>
+      db.query(
+        "update public.profiles set interests=array['Books','Fresh custom hobby'] where id=$1 returning interests",
+        [ids.host],
+      ),
+    "current_fresh",
+  );
+  assert.deepEqual(interests.rows[0].interests, [
+    "Books",
+    "Fresh custom hobby",
+  ]);
   const visible = await as(
     "guest",
     (db) =>
