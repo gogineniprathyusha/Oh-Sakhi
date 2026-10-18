@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import type { CommunityEvent } from "./types.ts";
 import { useEventCover } from "../../hooks/useEventCover.ts";
+import { Bloom } from "../../components/Bloom.tsx";
 export function EventArtwork({
   event,
   detail = false,
@@ -24,6 +25,7 @@ export function EventArtwork({
         } as CSSProperties
       }
     >
+      {!detail && <Bloom className="event-bloom" />}
       {url && <img className="event-cover" src={url} alt="" loading="lazy" />}
       {!detail && <span className="pill">{event.category}</span>}
       {!url && (
