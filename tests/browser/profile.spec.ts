@@ -18,6 +18,7 @@ test("member neighborhood and catalogue interests save and survive reload", asyn
   expect(state.member.interests).toEqual(["Books", "Coffee"]);
   await page.reload();
   await page.locator('.sidebar [data-page="profile"]').click();
+  await page.getByRole("button", { name: "Edit profile", exact: true }).click();
   await expect(page.getByLabel("Neighborhood (optional)")).toHaveValue(
     "Short Pump",
   );
@@ -131,6 +132,7 @@ test("photo upload, replacement, reload and removal use private owned objects", 
       .filter((call) => call.action === "download")
       .every((call) => call.authorized),
   ).toBe(true);
+  await page.getByRole("button", { name: "Edit profile", exact: true }).click();
   await page.getByRole("button", { name: "Remove photo", exact: true }).click();
   await expect(page.locator("#top-avatar img")).toHaveCount(0);
   expect(state.member.avatar_path).toBeNull();
@@ -282,6 +284,9 @@ for (const width of [320, 390])
     await profileMock(page, true);
     await page.goto("http://127.0.0.1:5184");
     await page.locator('.mobile-nav [data-page="profile"]').click();
+    await page
+      .getByRole("button", { name: "Edit profile", exact: true })
+      .click();
     await expect(
       page.getByRole("checkbox", { name: "Books", exact: true }),
     ).toBeVisible();

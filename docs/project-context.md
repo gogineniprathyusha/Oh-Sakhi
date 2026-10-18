@@ -1,6 +1,6 @@
 # Her Hobby Hour project context
 
-Last updated: **October 18, 2026**, during the desktop authentication fit follow-up on `feature/hh-brand-refresh`. The original brand refresh/browser-history fix (`ce36ac4`) and subsequent login refinements (`e242cc9`) were pushed on this branch, based on `main` at `109c890` (PR #14). The compact desktop layout and spacing refinements are documented below. The handoff and member spot-cancellation work are merged into that main revision. This is a dated handoff. Inspect current source/Git state and verify relevant hosted configuration before acting.
+Last updated: **October 18, 2026**, during the custom profile interests and profile summary update on `feature/hh-brand-refresh`. The original brand refresh (`ce36ac4`), login refinements (`e242cc9`) and compact layout/spacing follow-up (`c6a935f`) were pushed on this branch, based on `main` at `109c890` (PR #14). The later navigation tint is documented below. The handoff and member spot-cancellation work are merged into that main revision. This is a dated handoff. Inspect current source/Git state and verify relevant hosted configuration before acting.
 
 ## Project and repository
 
@@ -12,22 +12,24 @@ Last updated: **October 18, 2026**, during the desktop authentication fit follow
 - Frontend: Vite 7, React 19, TypeScript, existing project CSS. Backend: Supabase Auth, PostgreSQL/RLS, Storage and TypeScript/Deno Edge Functions. Email provider: Resend.
 - The owner requested one consistent stack. The October 18 visual refresh adopts the supplied `her-hobby-hour/` login/home design, large HH artwork, compact HH icon, cream/blush/burgundy palette and floral details in the root React app. Existing workflows and desktop/mobile navigation are retained. See [brand-refresh.md](brand-refresh.md). The earlier Downloads HTML preview is superseded as the visual reference.
 
+The shared sidebar and top bar use a very light warm blush gradient (`#FFF4F1` to `#FFEFED`) that blends into the existing page palette. Navigation text, active-state styling and layout remain intact. Verified October 18 with TypeScript/ESLint, 37 fixture-backed Chrome/mobile WebKit checks (including discovery and sampled accessibility), production build and desktop/mobile screenshot review. This is a frontend presentation change; no hosted configuration changed.
+
 ## Current product rules
 
-| Area                | Agreed and implemented behavior                                                                                                                                                                      |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Public discovery    | Visitors browse real published Supabase events and public organiser labels/photos. Account actions require login.                                                                                    |
-| Accounts            | Email/password signup, confirmation, login, recovery, persistent sessions and logout. New accounts are ordinary members.                                                                             |
-| Profiles            | Members edit name, bio, city, neighborhood and up to twelve supported interests; upload/replace/remove their own photo. Current photos are public by default; other profile fields stay protected.   |
-| Hosting             | Active members create under their own account and publish immediately or save a private draft. No admin publication review.                                                                          |
-| Editing             | The organiser edits draft/published event details. Edits preserve ownership, publication and registrations. Closed events cannot be reopened.                                                        |
-| Capacity            | Hosts enter a positive integer, from 1 to PostgreSQL's integer limit. There is no old 30-seat cap; capacity cannot fall below confirmed attendance.                                                  |
-| RSVP                | An active member gets a confirmed seat immediately while registration is open and capacity remains. Repeated RSVP calls do not consume extra seats. No approval/decline UI.                          |
-| Withdrawal          | A member cancels their own RSVP and may rejoin while eligible. History is retained.                                                                                                                  |
-| Cancellation        | The organiser cancels their event from event details. Seats release and history remains. The organiser does not see Report on their own event.                                                       |
-| Moderation          | Administrators remove violating events with a reason, review reports, manage non-admin member access and inspect audited records. Admin rights come from private role tables, never signup metadata. |
-| Personal navigation | My plans shows participation; My hosted events shows events the member organises. Header avatar opens My profile.                                                                                    |
-| Unimplemented       | My circle does not implement connections/private messaging. Stage G growth features are not implemented.                                                                                             |
+| Area                | Agreed and implemented behavior                                                                                                                                                                                                                            |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Public discovery    | Visitors browse real published Supabase events and public organiser labels/photos. Account actions require login.                                                                                                                                          |
+| Accounts            | Email/password signup, confirmation, login, recovery, persistent sessions and logout. New accounts are ordinary members.                                                                                                                                   |
+| Profiles            | Members view a profile summary and edit name, bio, city, neighborhood and up to twelve catalog/custom interests (new migration pending); upload/replace/remove their own photo. Current photos are public by default; other profile fields stay protected. |
+| Hosting             | Active members create under their own account and publish immediately or save a private draft. No admin publication review.                                                                                                                                |
+| Editing             | The organiser edits draft/published event details. Edits preserve ownership, publication and registrations. Closed events cannot be reopened.                                                                                                              |
+| Capacity            | Hosts enter a positive integer, from 1 to PostgreSQL's integer limit. There is no old 30-seat cap; capacity cannot fall below confirmed attendance.                                                                                                        |
+| RSVP                | An active member gets a confirmed seat immediately while registration is open and capacity remains. Repeated RSVP calls do not consume extra seats. No approval/decline UI.                                                                                |
+| Withdrawal          | A member cancels their own RSVP and may rejoin while eligible. History is retained.                                                                                                                                                                        |
+| Cancellation        | The organiser cancels their event from event details. Seats release and history remains. The organiser does not see Report on their own event.                                                                                                             |
+| Moderation          | Administrators remove violating events with a reason, review reports, manage non-admin member access and inspect audited records. Admin rights come from private role tables, never signup metadata.                                                       |
+| Personal navigation | My plans shows participation; My hosted events shows events the member organises. Header avatar opens My profile.                                                                                                                                          |
+| Unimplemented       | My circle does not implement connections/private messaging. Stage G growth features are not implemented.                                                                                                                                                   |
 
 Richmond times use `America/New_York`, independent of the visitor's browser timezone. The UI shows EDT or EST for the selected/event date, and rejects ambiguous or nonexistent daylight-saving wall times. The time control is the native input after a requested custom-control reversion. Event descriptions appear between location and organiser attribution.
 
@@ -71,7 +73,9 @@ Demo mode and sample events were deliberately removed. A missing/invalid Supabas
 
 ## Supabase migrations and functions
 
-All **17 migration files currently in root `supabase/migrations/`**, through **`202610180005_rsvp_cancellation_emails.sql`**, were applied to the configured project as of this handoff. Earlier migrations were applied manually/through SQL Editor or Management API. Do not blindly run `db push` or replay initial migrations against this project; reconcile actual applied state first. For a fresh project, use files in filename order and the documented function/setup rollout sequences.
+The **17 migrations** through **`202610180005_rsvp_cancellation_emails.sql`** were applied to the configured project as of this handoff. Earlier migrations were applied manually/through SQL Editor or Management API. Do not blindly run `db push` or replay initial migrations against this project; reconcile actual applied state first. For a fresh project, use files in filename order and the documented function/setup rollout sequences.
+
+A new 18th file, `202610180006_custom_profile_interests.sql`, is implemented and tested locally but **not applied to the shared hosted project**. It accepts bounded custom interests in the existing private profile array and maintains catalog links without making custom names public. Apply only this outstanding migration once before deploying the new profile editor; never replay the earlier files. See [member-profiles.md](member-profiles.md) for rollout and validation.
 
 Important follow-ups to historical migrations:
 

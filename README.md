@@ -161,3 +161,7 @@ Organiser emails use `202610180003_organiser_emails.sql`: publication confirmati
 Own-event cancellation confirmations use the additive `202610180004_organiser_cancellation_emails.sql` migration. Deploy the expanded worker, apply the migration once, then run `supabase/setup/enable_organiser_cancellation_emails.sql`. Repeated cancellation calls do not resend, and old cancellations are not backfilled. See the activation guide for recipient and pause rules.
 
 Members cancelling their own spot receive **Your spot cancellation is confirmed**, independently of whole-event cancellation emails. This uses `202610180005_rsvp_cancellation_emails.sql` and the separate `supabase/setup/enable_rsvp_cancellation_emails.sql` activation script after worker deployment. Rejoining suppresses an unsent notice; repeated withdrawal does not resend it. See the activation guide for rollout and verification status.
+
+## Custom profile interests
+
+Profiles now open as a saved summary with an **Edit profile** button. Members can select checkbox interests and enter other interests separated by commas, with up to twelve in total. Custom names stay private. Before deploying this editor, apply only the outstanding `supabase/migrations/202610180006_custom_profile_interests.sql` migration once; it has been tested locally and has not been applied to the shared hosted project. See [member profiles](docs/member-profiles.md) for rollout and verification limits.

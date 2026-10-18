@@ -226,7 +226,8 @@ export async function profileMock(page: Page, withPhoto = false) {
 }
 export async function openProfile(page: Page) {
   await page.goto(origin);
-  await page.locator('.sidebar [data-page="profile"]').click();
+  await page.getByRole("button", { name: "My profile", exact: true }).click();
+  await page.getByRole("button", { name: "Edit profile", exact: true }).click();
 }
 export const photoFile = {
   name: "profile.png",
