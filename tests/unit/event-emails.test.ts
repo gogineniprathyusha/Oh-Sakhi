@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createHmac } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { eventEmailsHandler } from "../../supabase/functions/event-emails/handler.ts";
 import {
@@ -182,14 +182,20 @@ test("provider timeouts/rate limits retry; rejected keys fail without exposing s
   assert.equal((await f.handler(request())).status, 503);
   assert.equal(f.payloads.length, 1);
 });
-test("Svix verification matches the official test vector and rejects body tampering, expiry and bad signatures", async () => {
+test("Svix verification accepts independently signed events and rejects body tampering, expiry and bad signatures", async () => {
+  // Ephemeral test data only: no account credentials or copied example keys.
+  // Node's HMAC signer is independent of the handler's Web Crypto verifier.
+  const bytes = randomBytes(32);
+  const key = "whsec_" + bytes.toString("base64");
+  const raw = '{"event_type":"ping","data":{"success":true}}';
+  const signature = createHmac("sha256", bytes)
+    .update(`msg_loFOjxBNrRLzqYUf.1731705121.${raw}`)
+    .digest("base64");
   const headers = new Headers({
     "svix-id": "msg_loFOjxBNrRLzqYUf",
     "svix-timestamp": "1731705121",
-    "svix-signature": "v1,rAvfW3dJ/X/qxhsaXPOyyCGmRKsaKWcsNccKXlIktD0=",
+    "svix-signature": `v1,${signature}`,
   });
-  const raw = '{"event_type":"ping","data":{"success":true}}';
-  const key = "whsec_plJ3nmyCDGBKInavdOK15jsl";
   assert.equal(await verifyWebhook(raw, headers, key, 1731705121000), true);
   assert.equal(
     await verifyWebhook(raw + " ", headers, key, 1731705121000),
@@ -211,9 +217,7 @@ test("signed delivery webhooks are bounded, authenticated and record no recipien
       },
     },
   });
-  const secret =
-    "whsec_" +
-    Buffer.from("a-test-secret-with-enough-entropy").toString("base64");
+  const secret = "whsec_" + randomBytes(32).toString("base64");
   const handler = emailWebhookHandler(
     () => db,
     () => secret,
