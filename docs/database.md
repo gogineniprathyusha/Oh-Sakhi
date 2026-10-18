@@ -24,9 +24,11 @@ Apply files in filename order, once each. Do not edit migrations that have alrea
 
 `202610180002_event_emails.sql` adds the private event email outbox, registration generations, event revisions and service-only delivery RPCs. It preserves existing data and starts delivery disabled. The separate `supabase/setup/configure_event_emails.sql` script prepares cron/Vault while delivery remains disabled; `enable_event_emails.sql` activates delivery after frontend/worker/webhook configuration.
 
-The historical foundation required administrator publication. **The organiser-workflow migration replaces that policy.** Apply all fourteen files for the current application and deploy `event-image` for covers and `delete-account` for account deletion. The frontend reads `meetup_directory` and uses registration RPCs; it does not write registration rows directly. Existing manual SQL Editor installations should apply only outstanding files. Apply `202610170010_flexible_group_size.sql` before entering group sizes above 30 or below 2. Group sizes must be positive integers within PostgreSQL's integer range (1–2,147,483,647), and cannot be reduced below the confirmed attendee count.
+The historical foundation required administrator publication. **The organiser-workflow migration replaces that policy.** Apply all fifteen files for the current application and deploy `event-image` for covers and `delete-account` for account deletion. The frontend reads `meetup_directory` and uses registration RPCs; it does not write registration rows directly. Existing manual SQL Editor installations should apply only outstanding files. Apply `202610170010_flexible_group_size.sql` before entering group sizes above 30 or below 2. Group sizes must be positive integers within PostgreSQL's integer range (1–2,147,483,647), and cannot be reduced below the confirmed attendee count.
 
 The first foundation migration classifies legacy events as drafts because they previously had no publication status. Their registrations are preserved. The organiser-workflow migration keeps those drafts private to avoid unexpectedly publishing unfinished content. Their organiser can publish them directly, with no admin review. Newly created events default to `published`.
+
+`202610180003_organiser_emails.sql` extends the private queue with organiser publication/join notices and related-member cleanup. Its separate switch starts disabled; deploy the updated worker before running `enable_organiser_emails.sql`. Existing attendee email delivery stays enabled.
 
 ## Data and visibility
 

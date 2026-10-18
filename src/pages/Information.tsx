@@ -107,10 +107,12 @@ export function Information({ page }: { page: InformationPage }) {
               providers may process technical logs needed to operate the
               service. Resend processes recipient email addresses and event
               details to deliver RSVP confirmations, date/time/venue changes,
-              cancellations and reminders. These are service messages for events
-              you join. Cancel an active RSVP in My plans to stop its future
-              updates and reminders. Delivery records help us retry failures and
-              stop sending to addresses that bounce or report spam. We do not
+              cancellations and reminders. Organisers receive publication and
+              new-attendee notices; the latter include the attendee's display
+              name. These are service messages for events you join or organise.
+              Cancel an active RSVP in My plans to stop its future updates and
+              reminders. Delivery records help us retry failures and stop
+              sending to addresses that bounce or report spam. We do not
               implement advertising trackers.
             </p>
             <p>
