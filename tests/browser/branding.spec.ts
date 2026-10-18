@@ -202,6 +202,80 @@ for (const width of [320, 390, 440, 800, 1024, 1440]) {
   });
 }
 
+for (const [width, height] of [
+  [1440, 900],
+  [1366, 768],
+  [1280, 720],
+  [1024, 768],
+  [1280, 640],
+]) {
+  test(`desktop auth content fits without scrolling at ${width}x${height}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width, height });
+    await authMock(page);
+    await page.goto(origin);
+    await page
+      .getByRole("button", { name: "Host your first experience" })
+      .click();
+    await page.evaluate(() => document.fonts.ready);
+    for (const mode of ["login", "signup", "reset"] as const) {
+      if (mode === "signup")
+        await page
+          .getByRole("button", { name: "Create account", exact: true })
+          .click();
+      if (mode === "reset") {
+        await page.getByRole("button", { name: "Back to login" }).click();
+        await page.getByRole("button", { name: "Forgot password?" }).click();
+      }
+      await page.evaluate(() => scrollTo(0, 0));
+      const bounds = await page.evaluate(() => ({
+        viewportHeight: innerHeight,
+        viewportWidth: innerWidth,
+        pageHeight: document.documentElement.scrollHeight,
+        pageWidth: document.documentElement.scrollWidth,
+      }));
+      expect(
+        bounds.pageHeight,
+        `${mode} must fit the window height`,
+      ).toBeLessThanOrEqual(bounds.viewportHeight);
+      expect(bounds.pageWidth).toBeLessThanOrEqual(bounds.viewportWidth);
+      for (const selector of [".auth-story", ".auth-benefits", ".auth-card"]) {
+        const region = await page.locator(selector).boundingBox();
+        expect(region).not.toBeNull();
+        expect(region!.y).toBeGreaterThanOrEqual(0);
+        expect(region!.y + region!.height).toBeLessThanOrEqual(height);
+      }
+      const spacing = await page.evaluate(() => {
+        const panel = document
+          .querySelector(".auth-intro")!
+          .getBoundingClientRect();
+        const story = document
+          .querySelector(".auth-story")!
+          .getBoundingClientRect();
+        const benefits = document
+          .querySelector(".auth-benefits")!
+          .getBoundingClientRect();
+        return {
+          above: story.top - panel.top,
+          below: panel.bottom - benefits.bottom,
+        };
+      });
+      expect(
+        Math.abs(spacing.above - spacing.below),
+        "Story and benefits should have equal outer spacing",
+      ).toBeLessThanOrEqual(2);
+      await expect(
+        page.getByRole("link", { name: "Privacy Policy" }),
+      ).toBeInViewport();
+      await page.screenshot({
+        path: testInfo.outputPath(`compact-${mode}-${width}x${height}.png`),
+        fullPage: true,
+      });
+    }
+  });
+}
+
 test("hero hosting actions keep the login gate and auth modes remain accessible", async ({
   page,
 }, testInfo) => {
