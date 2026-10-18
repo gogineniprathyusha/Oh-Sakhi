@@ -109,6 +109,7 @@ test("branded templates escape member content, link to the event and use actual 
     "reminder",
     "organiser_published",
     "organiser_rsvp",
+    "organiser_cancelled",
   ] as const) {
     const payload = emailPayload(
       { ...job, kind, previous_event: { ...event, place: "Old venue" } },
@@ -129,6 +130,27 @@ test("branded templates escape member content, link to the event and use actual 
   assert.throws(() =>
     emailPayload(job, { ...settings, appUrl: "javascript:bad()" }),
   );
+});
+test("organiser cancellation confirms closure without claiming attendee delivery", () => {
+  const payload = emailPayload(
+    {
+      ...job,
+      kind: "organiser_cancelled",
+      event: { ...event, status: "cancelled" },
+    },
+    settings,
+  );
+  assert.match(payload.subject, /^Your event cancellation is confirmed:/);
+  assert.match(payload.text, /no longer open for RSVPs/);
+  assert.match(payload.text, /seats have been released/);
+  assert.match(
+    payload.text,
+    /View cancelled event: https:\/\/example.test\/\?event=/,
+  );
+  assert.match(payload.text, /Sign in with your organiser account/);
+  assert.ok(!payload.text.includes("cancel your RSVP"));
+  assert.ok(!payload.text.includes("attendees have been notified"));
+  assert.deepEqual(payload.to, [job.email]);
 });
 test("organiser emails show safe attendee names and organiser-specific actions", () => {
   const joined = emailPayload(
