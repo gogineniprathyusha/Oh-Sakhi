@@ -14,7 +14,7 @@ The root React application adopts the owner-supplied `her-hobby-hour/` login and
 
 ## Login placement refinement
 
-The owner's login previews supply the left-panel text arrangement: the Richmond community label, “It’s your time to belong.” headline, supporting copy, the original HH illustration below, and the closing community benefits. The illustration uses the existing `hh-artwork.webp` at its original proportions, without a circular crop. The owner's subsequent refinement removes the separate compact icon/wordmark header, adds centred branding beneath the illustration, and reduces the illustration's maximum width from 440 to 360 pixels on desktop and from 240 to 200 pixels on mobile.
+The owner's login previews supply the left-panel text arrangement: the Richmond community label, “It’s your time to belong.” headline, supporting copy, the original HH illustration below, and the closing community benefits. The illustration uses the existing `hh-artwork.webp` at its original proportions, without a circular crop. The owner's subsequent refinement removes the separate compact icon/wordmark header, adds centred branding beneath the illustration, and uses height-responsive artwork on desktop and a maximum illustration width of 220 pixels on mobile.
 
 The closing tagline is replaced with three columns matching the owner’s illustrated reference: a cup with a heart above “Hobbies that heal”, a lotus above “A community that gets you”, and a heart above “A happier, you”. The row is centred at a maximum width of 520 pixels, with reduced icon and label sizes following the owner’s size adjustment. Rose outline SVGs and vertical separators scale with the layout; the text stays accessible and decorative icons are hidden from assistive technology. `AuthBenefits.tsx` supplies this row across auth modes.
 
@@ -43,6 +43,18 @@ Artwork blending follow-up on October 18: a rectangular CSS mask feathers the il
 The authentication page's top-right and bottom-left flowers are replaced with a transparent botanical stem inspired by the original HH illustration: bronze leaves, rose-pink buds and blush blossoms. The same WebP is reused in both corners, with the upper one rotated. It sits behind the panel, scales with the viewport and is clipped at the page edge to prevent horizontal overflow. The homepage retains its existing floral SVG. [Asset provenance and generation prompt](brand-botanical-stem.md).
 
 Verified October 18 after adjusting placement: TypeScript/ESLint, **14 fixture-backed Chrome/mobile WebKit branding/accessibility checks**, production build and formatting checks passed. Desktop/mobile screenshots were reviewed. No hosted changes, emails or deployment were performed.
+
+## Desktop window fit
+
+The desktop authentication card now uses smaller form controls, tighter spacing and viewport-height-based artwork and typography. The slightly enlarged illustration is capped at 350 pixels, or 240 pixels in windows at most 700 pixels tall; centring the full content group preserves equal outer spacing as it grows. Inputs are 48 pixels high, reduced to 44 pixels in windows at most 700 pixels tall. The original bug reproduced a 918 pixel document in a 1366 × 768 window. The desktop rules apply above 790 pixels wide; narrower screens retain the readable stacked layout and scrolling. Layout height can still grow for enlarged text or longer notices, so content remains reachable.
+
+The login headline and supporting paragraph use the full available story width, allowing longer lines when there is room and natural wrapping on narrower screens. On desktop, the story and benefits form a vertically centred group with equal outer space above the Richmond label and below the benefit row, separated by a small responsive gap. The homepage's gap beneath the final community note is reduced to 16 pixels by removing that note's bottom margin and tightening discovery content padding. Mobile footer clearance for the fixed navigation is retained.
+
+Regression checks cover login, signup and reset at 1440 × 900, 1366 × 768, 1280 × 720, 1024 × 768 and 1280 × 640 in Chrome and mobile WebKit. They check the complete document height, card/content bounds, equal space above the story and below the benefits, and visible legal links. These checks use local fixtures and send no emails.
+
+Verified October 18 after the final artwork and spacing adjustments: TypeScript/ESLint, **35 targeted fixture-backed browser checks** (branding, accessibility and auth/recovery), production build, formatting checks and desktop/mobile screenshot review passed. The full browser suite was not rerun. No hosted changes, emails or deployment were performed.
+
+The later paragraph-width and vertical-balance adjustments passed TypeScript/ESLint, **24 fixture-backed Chrome/mobile WebKit branding/accessibility checks**, production build and formatting checks. The desktop result was visually reviewed; no hosted changes or deployment were performed. The equal-spacing follow-up also passed those checks; one Chrome context timed out before application load and its targeted rerun passed.
 
 ## Verification and deployment
 

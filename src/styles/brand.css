@@ -182,6 +182,12 @@ body {
 .discover-content .heading-row h2 {
   font-size: clamp(29px, 3vw, 40px);
 }
+#view > .discover-content {
+  padding-bottom: 16px;
+}
+.discover-content > .box-centered:last-child {
+  margin-bottom: 0;
+}
 .heading-row > .btn {
   flex-shrink: 0;
 }
@@ -303,7 +309,6 @@ body {
   color: var(--muted);
   font-size: 16px;
   line-height: 1.8;
-  max-width: 420px;
   margin: 0;
 }
 .auth-logo {
@@ -389,7 +394,7 @@ body {
 }
 .auth-back {
   display: block;
-  font-size: 12px;
+  font-size: 14px;
   margin-bottom: 24px;
 }
 .auth-icon {
@@ -491,6 +496,174 @@ body {
     flex-wrap: wrap;
   }
 }
+/* Keep the complete split card visible in ordinary laptop windows. */
+@media (min-width: 791px) {
+  .auth-stage {
+    padding: 16px;
+  }
+  .auth-layout {
+    min-height: min(820px, calc(100svh - 32px));
+  }
+  .auth-intro,
+  .auth-panel {
+    padding: clamp(16px, 2.5svh, 24px) clamp(24px, 3vw, 44px);
+  }
+  .auth-intro {
+    justify-content: center;
+    gap: clamp(16px, 3svh, 28px);
+  }
+  .auth-story h1 {
+    font-size: clamp(34px, min(4vw, 6svh), 54px);
+    margin: 12px 0;
+  }
+  .auth-story-copy {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .auth-logo {
+    width: min(100%, 37svh, 350px);
+    margin-top: 12px;
+  }
+  .auth-artwork-name {
+    font-size: clamp(24px, 2.8vw, 34px);
+  }
+  .auth-artwork-tag {
+    font-size: clamp(34px, min(3.8vw, 5svh), 50px);
+  }
+  .auth-benefits {
+    font-size: clamp(10px, 0.85vw, 13px);
+  }
+  .auth-benefits > li {
+    gap: 4px;
+  }
+  .auth-benefits svg {
+    width: 30px;
+    height: 30px;
+  }
+  .auth-card {
+    max-width: 430px;
+  }
+  .auth-back {
+    padding: 4px 0;
+    margin-bottom: 10px;
+  }
+  .auth-icon {
+    width: 64px;
+    height: 67px;
+    border-radius: 18px;
+    margin-bottom: 10px;
+  }
+  .auth-card h2 {
+    font-size: clamp(32px, min(3.3vw, 5svh), 46px);
+  }
+  .auth-subtitle {
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 10px 0 16px;
+  }
+  .auth-card .field {
+    margin-bottom: 10px;
+  }
+  .auth-card .field input {
+    height: 48px;
+  }
+  .auth-card .btn {
+    min-height: 46px;
+    padding: 10px 18px;
+    font-size: 18px;
+  }
+  .auth-forgot {
+    margin-bottom: 10px;
+  }
+  .auth-links {
+    margin-top: 12px;
+  }
+  .auth-or {
+    margin-bottom: 12px;
+  }
+  .auth-terms {
+    font-size: 11px;
+    line-height: 1.5;
+    margin: 16px 0 10px;
+  }
+  .auth-card .legal-links {
+    gap: 8px 14px;
+    font-size: 11px;
+  }
+}
+@media (min-width: 791px) and (max-height: 700px) {
+  .auth-stage {
+    padding: 12px;
+  }
+  .auth-layout {
+    min-height: calc(100svh - 24px);
+  }
+  .auth-intro,
+  .auth-panel {
+    padding: 12px 24px;
+  }
+  .auth-intro {
+    gap: 12px;
+  }
+  .auth-story h1 {
+    font-size: clamp(30px, min(3.6vw, 5.5svh), 38px);
+    margin: 8px 0;
+  }
+  .auth-story-copy {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .auth-logo {
+    width: min(100%, 33svh, 240px);
+  }
+  .auth-artwork-name {
+    font-size: 26px;
+  }
+  .auth-artwork-tag {
+    font-size: 36px;
+  }
+  .auth-benefits svg {
+    width: 26px;
+    height: 26px;
+  }
+  .auth-back {
+    margin-bottom: 6px;
+  }
+  .auth-icon {
+    width: 48px;
+    height: 51px;
+    margin-bottom: 6px;
+  }
+  .auth-card h2 {
+    font-size: 32px;
+  }
+  .auth-subtitle {
+    font-size: 13px;
+    margin: 8px 0 12px;
+  }
+  .auth-card .field {
+    margin-bottom: 8px;
+  }
+  .auth-card .field input {
+    height: 44px;
+  }
+  .auth-card .btn {
+    min-height: 44px;
+    font-size: 17px;
+  }
+  .auth-forgot {
+    margin-bottom: 8px;
+  }
+  .auth-links {
+    margin-top: 8px;
+  }
+  .auth-or {
+    margin-bottom: 8px;
+  }
+  .auth-terms {
+    margin: 12px 0 8px;
+  }
+}
 @media (max-width: 790px) {
   .auth-stage {
     padding: 16px;
@@ -515,7 +688,7 @@ body {
     line-height: 1.7;
   }
   .auth-logo {
-    width: min(100%, 200px);
+    width: min(100%, 220px);
     margin-top: 20px;
   }
   .auth-artwork-name {
