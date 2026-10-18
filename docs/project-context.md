@@ -55,7 +55,7 @@ Demo mode and sample events were deliberately removed. A missing/invalid Supabas
 - Public publishable/legacy anon keys are intended for browser use; privileged service credentials are not. RLS and server RPC checks enforce access.
 - Supabase Auth redirect settings must cover the intended website/local origins, including `/?recovery=1`. Do not assume event-email verification also verifies production Auth SMTP/redirect settings.
 - `vercel.json` contains Vite build settings, public information-page rewrites and security headers. **Pre-launch indexing restrictions remain in source** (`X-Robots-Tag` and `public/robots.txt`). Deployment does not imply owner approval to remove them.
-- Final legal wording, production Auth SMTP, backups/restore validation, retention decisions and monitoring ownership need current confirmation. They were not proven complete by the event-email work. Public support pages identify the supplied operator/contact and remain drafts for review.
+- Final legal wording, backups/restore validation, retention decisions and monitoring ownership need current confirmation. Public support pages identify the supplied operator/contact and remain drafts for review. Auth SMTP password-reset verification is recorded below; email quotas and a fresh signup through the new sender were not reviewed in that check.
 
 ## Supabase migrations and functions
 
@@ -84,6 +84,12 @@ Deployed Edge Functions:
 | `email-webhook`  | Record delivery/bounce/complaint, deduplicate events and suppress problem addresses               | Gateway JWT disabled intentionally; raw-body Svix signature/timestamp verification                        |
 
 Supabase CLI was logged in during the previous work; access can expire. Typical deployment: `npx --yes supabase functions deploy FUNCTION --project-ref znuzfxbedoyuqpksvbcr --use-api`. Management API SQL used `supabase db query --project-ref ... --linked --file PATH`. Confirm CLI support and target before use. Never print private credentials to diagnose access.
+
+## Authentication SMTP — owner verification on October 18, 2026
+
+The owner checked Supabase Auth's custom SMTP toggle and initially found it off. After following the Resend SMTP setup instructions, the owner reported receiving a password-reset email from **`events@alerts.herhobbyhour.com`** and successfully completing the reset on the website. This records user-confirmed sender delivery and the recovery flow after custom SMTP setup, separate from the Stage F event-email integration.
+
+This was not an independent API/dashboard audit: saved SMTP credentials and every Auth/redirect setting were not inspected. A fresh signup/confirmation through the new sender and configured Auth/Resend sending limits were not separately verified. Keep credentials private; no application code or SQL migration was required for the dashboard SMTP setup.
 
 ## Email behavior and verified setup
 

@@ -2,8 +2,13 @@
 
 > Update: browser demo mode has been removed. Signed-out visitors now browse published Supabase events and sign in for account actions. Demo references below describe earlier-stage behavior and verification.
 
-
 Verified on October 17, 2026. The application uses the existing Supabase project configuration in ignored `.env.local`. No credentials, session tokens or test passwords are included in this report or committed files.
+
+## October 18 update — custom SMTP and password recovery
+
+The owner initially found custom SMTP disabled in Supabase Auth. After following the Resend SMTP configuration steps, the owner confirmed receipt of a reset email from `events@alerts.herhobbyhour.com` and successful completion of the website's password-reset flow. This is user-confirmed evidence for Auth email delivery and recovery after SMTP setup; event notifications use the separately verified Stage F integration.
+
+The agent did not independently inspect saved SMTP credentials or all hosted Auth/redirect settings, send another reset email, or retest signup confirmation through the new sender. Sending quotas were not reviewed. See [project-context.md](project-context.md) for the consolidated current handoff; the October 17 results below remain historical evidence.
 
 ## Hosted project results
 
