@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase.ts";
 import { withoutAuthCallback } from "../lib/auth-callback.ts";
 import type { AuthMode } from "../features/events/types.ts";
 import { LegalLinks } from "../components/LegalLinks.tsx";
+import { AuthBenefits } from "../components/AuthBenefits.tsx";
 export function Auth({
   mode,
   setMode,
@@ -32,8 +33,7 @@ export function Auth({
     update: "Save new password",
   };
   const subtitles = {
-    login:
-      "Welcome back to your circle—where hobbies bloom into friendships and a little time becomes a happier you.",
+    login: "Sign in to discover your next favorite experience.",
     signup:
       "Create your space for meaningful friendships, hobbies, and beautiful experiences.",
     reset: "Enter your email and we’ll help you get back to your circle.",
@@ -115,20 +115,27 @@ export function Auth({
     <div className="auth-stage">
       <div className="auth-layout">
         <div className="auth-intro">
-          <h1 className="visually-hidden">Her Hobby Hour — Oh Sakhi!</h1>
-          <img
-            className="auth-logo"
-            src="/brand/hh-artwork.webp"
-            alt="A woman enjoying coffee beside the HH clock monogram"
-            width="1254"
-            height="1254"
-            fetchPriority="high"
-          />
-          <p className="brand-promise">A LITTLE TIME FOR A HAPPIER YOU</p>
-          <div className="brand-values">
-            CREATE <span>♥</span> LEARN <span>♥</span> CONNECT <span>♥</span>{" "}
-            BELONG
+          <div className="auth-story">
+            <div className="eyebrow">RICHMOND · WOMEN’S SOCIAL COMMUNITY</div>
+            <h1>
+              It’s <em>your time</em> to belong.
+            </h1>
+            <p className="auth-story-copy">
+              Discover new hobbies, meet kindred spirits, and make beautiful
+              memories beyond the everyday.
+            </p>
+            <img
+              className="auth-logo"
+              src="/brand/hh-artwork.webp"
+              alt="Her Hobby Hour — Oh Sakhi! artwork of a woman enjoying coffee beside the HH clock monogram"
+              width="1254"
+              height="1254"
+              fetchPriority="high"
+            />
+            <p className="auth-artwork-name">HER HOBBY HOUR</p>
+            <p className="auth-artwork-tag">Oh Sakhi!</p>
           </div>
+          <AuthBenefits />
         </div>
         <main className="auth-panel">
           <div className="auth-card">

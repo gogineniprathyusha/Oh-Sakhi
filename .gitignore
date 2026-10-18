@@ -9,3 +9,7 @@ playwright-report/
 !.env.example
 supabase/.temp/
 supabase/.branches/
+
+# Local design references
+/*preview*.html
+/her-hobby-hour/

@@ -230,6 +230,7 @@ body {
   justify-content: center;
   position: relative;
   isolation: isolate;
+  overflow: clip;
   background:
     radial-gradient(ellipse at 0 0, #f8c6cd65, transparent 45%),
     radial-gradient(ellipse at 100% 100%, var(--blush), transparent 45%),
@@ -241,22 +242,24 @@ body {
   position: absolute;
   pointer-events: none;
   width: min(28vw, 300px);
-  height: 350px;
-  background: url("/brand/floral-corner.svg") center / contain no-repeat;
-  opacity: 0.45;
+  aspect-ratio: 2 / 3;
+  background: url("/brand/blush-botanical-stem.webp") center / contain no-repeat;
+  opacity: 0.65;
   z-index: -1;
 }
 .auth-stage::before {
   left: 0;
   bottom: 0;
+  transform: translateX(-38%);
 }
 .auth-stage::after {
   right: 0;
   top: 0;
-  transform: rotate(180deg);
+  transform: translateX(34%) rotate(180deg);
 }
 .auth-layout {
   width: min(1320px, 100%);
+  min-height: min(820px, calc(100svh - 56px));
   display: grid;
   grid-template-columns: 55% 45%;
   border: 1px solid var(--gold);
@@ -267,49 +270,117 @@ body {
 }
 .auth-intro {
   min-width: 0;
-  padding: 30px;
+  padding: 36px clamp(26px, 4vw, 60px) 32px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 32px;
+  text-align: left;
   background:
-    radial-gradient(ellipse at 20% 20%, #f8c6cd75, transparent 48%), #fff8f5;
+    linear-gradient(#fff8f580, #fff8f580),
+    url("/brand/blush-watercolour.webp") center / cover,
+    #fff8f5;
   border-right: 1px solid #d4a37388;
+}
+.auth-story .eyebrow {
+  line-height: 1.8;
+}
+.auth-story h1 {
+  font:
+    500 clamp(42px, 4.4vw, 66px)/1.14 "Playfair Display",
+    Georgia,
+    serif;
+  letter-spacing: -1px;
+  color: var(--plum);
+  margin: 22px 0;
+}
+.auth-story h1 em {
+  color: var(--dust);
+  font-weight: 500;
+}
+.auth-story-copy {
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.8;
+  max-width: 420px;
+  margin: 0;
 }
 .auth-logo {
   display: block;
-  width: 100%;
+  width: min(100%, 360px);
   height: auto;
-  max-width: 660px;
+  margin: 24px auto 0;
   mix-blend-mode: multiply;
-  mask-image: radial-gradient(ellipse at center, black 65%, transparent 82%);
+  /* Feather the artwork's paper edges into the panel's watercolour wash. */
+  mask-image:
+    linear-gradient(to right, transparent, #000 8%, #000 92%, transparent),
+    linear-gradient(to bottom, transparent, #000 12%, #000 82%, transparent);
+  mask-composite: intersect;
 }
-.brand-promise {
-  font:
-    500 13px/1.8 "Playfair Display",
-    Georgia,
-    serif;
-  letter-spacing: 0.16em;
+.auth-artwork-name {
+  margin: 0;
+  text-align: center;
   color: var(--plum);
-  margin: 12px 0;
+  letter-spacing: 0.045em;
+  white-space: nowrap;
+  font:
+    400 clamp(24px, 2.8vw, 42px)/1.2 Georgia,
+    "Times New Roman",
+    serif;
 }
-.brand-values {
-  color: var(--muted);
-  font-size: 10px;
-  line-height: 1.8;
-  letter-spacing: 0.14em;
+.auth-artwork-tag {
+  margin: 4px 0 0;
+  text-align: center;
+  color: #d85a70;
+  font:
+    italic 400 clamp(40px, 4.2vw, 64px)/1.1 "Brush Script MT",
+    "Snell Roundhand",
+    cursive;
 }
-.brand-values span {
-  padding: 0 6px;
-  color: var(--wine);
+.auth-benefits {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  max-width: 520px;
+  align-self: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  color: var(--plum);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font:
+    400 clamp(10px, 0.9vw, 14px)/1.35 Georgia,
+    "Times New Roman",
+    serif;
+}
+.auth-benefits > li {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 6px;
+  padding: 0 clamp(4px, 1vw, 16px);
+}
+.auth-benefits > li + li {
+  border-left: 1px solid var(--rose);
+}
+.auth-benefits svg {
+  display: block;
+  width: 36px;
+  height: 36px;
+  color: #d85a70;
 }
 .auth-panel {
   min-width: 0;
   padding: 36px clamp(24px, 3.5vw, 56px);
   display: grid;
   place-items: center;
-  background: linear-gradient(180deg, #fffdfc, var(--cream));
+  background:
+    linear-gradient(180deg, #fffdfc99, #fdf6f299),
+    url("/brand/blush-watercolour.webp") center / cover,
+    var(--cream);
 }
 .auth-card {
   width: 100%;
@@ -426,23 +497,44 @@ body {
   }
   .auth-layout {
     grid-template-columns: 1fr;
+    min-height: 0;
     border-radius: 22px;
   }
   .auth-intro {
-    padding: 20px;
+    padding: 24px 20px;
+    gap: 24px;
     border-right: 0;
     border-bottom: 1px solid #d4a37388;
   }
+  .auth-story h1 {
+    font-size: clamp(36px, 8vw, 48px);
+    margin: 14px 0;
+  }
+  .auth-story-copy {
+    font-size: 14px;
+    line-height: 1.7;
+  }
   .auth-logo {
-    max-width: 240px;
+    width: min(100%, 200px);
+    margin-top: 20px;
   }
-  .brand-promise {
-    font-size: 10px;
-    margin: 8px 0;
+  .auth-artwork-name {
+    font-size: clamp(20px, 5.5vw, 30px);
   }
-  .brand-values {
-    font-size: 8px;
-    letter-spacing: 0.08em;
+  .auth-artwork-tag {
+    font-size: clamp(35px, 8vw, 42px);
+  }
+  .auth-benefits {
+    font-size: clamp(9px, 2.15vw, 11px);
+    letter-spacing: 0.03em;
+  }
+  .auth-benefits > li {
+    gap: 5px;
+    padding: 0 4px;
+  }
+  .auth-benefits svg {
+    width: 28px;
+    height: 28px;
   }
   .auth-panel {
     padding: 24px 20px 32px;

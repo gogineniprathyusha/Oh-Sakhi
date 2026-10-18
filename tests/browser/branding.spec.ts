@@ -29,7 +29,7 @@ async function expectBrandColors(page: Page, region: Locator) {
   ).toBe(0);
 }
 
-for (const width of [320, 390, 440, 1440]) {
+for (const width of [320, 390, 440, 800, 1024, 1440]) {
   test(`brand artwork keeps its colors and account/event controls work at ${width}px`, async ({
     page,
   }, testInfo) => {
@@ -94,8 +94,76 @@ for (const width of [320, 390, 440, 1440]) {
       page.getByRole("heading", { name: "Welcome back" }),
     ).toBeVisible();
     await expect(page.locator(".auth-intro h1")).toHaveText(
-      "Her Hobby Hour — Oh Sakhi!",
+      "It’s your time to belong.",
     );
+    await expect(page.locator(".auth-logo")).toHaveJSProperty(
+      "naturalWidth",
+      1254,
+    );
+    await expect(page.locator(".auth-logo")).toHaveAttribute(
+      "src",
+      "/brand/hh-artwork.webp",
+    );
+    await expect(page.locator(".auth-artwork-name")).toHaveText(
+      "HER HOBBY HOUR",
+    );
+    await expect(page.locator(".auth-artwork-tag")).toHaveText("Oh Sakhi!");
+    await expect(page.locator(".auth-benefits > li")).toHaveText([
+      "Hobbiesthat heal",
+      "A communitythat gets you",
+      "A happier,you",
+    ]);
+    await expect(page.locator(".auth-icon")).toHaveAttribute(
+      "src",
+      "/brand/hh-icon.webp",
+    );
+    await expect(page.locator(".auth-icon")).toHaveJSProperty(
+      "naturalWidth",
+      465,
+    );
+    await expect(page.locator(".auth-card")).toHaveCSS("text-align", "center");
+    await expect(page.locator(".auth-subtitle")).toHaveText(
+      "Sign in to discover your next favorite experience.",
+    );
+    // Keep the editorial content in reading order without overlapping the artwork or form.
+    const regions = await page.evaluate(() =>
+      Object.fromEntries(
+        [
+          ".auth-story h1",
+          ".auth-story-copy",
+          ".auth-logo",
+          ".auth-artwork-name",
+          ".auth-artwork-tag",
+          ".auth-benefits",
+          ".auth-intro",
+          ".auth-panel",
+        ].map((selector) => {
+          const { x, y, width, height } = document
+            .querySelector(selector)!
+            .getBoundingClientRect();
+          return [selector, { x, y, width, height }];
+        }),
+      ),
+    );
+    for (const [before, after] of [
+      [".auth-story h1", ".auth-story-copy"],
+      [".auth-story-copy", ".auth-logo"],
+      [".auth-logo", ".auth-artwork-name"],
+      [".auth-artwork-name", ".auth-artwork-tag"],
+      [".auth-artwork-tag", ".auth-benefits"],
+    ]) {
+      expect(regions[after].y).toBeGreaterThanOrEqual(
+        regions[before].y + regions[before].height,
+      );
+    }
+    if (width > 790)
+      expect(regions[".auth-panel"].x).toBeGreaterThanOrEqual(
+        regions[".auth-intro"].x + regions[".auth-intro"].width - 1,
+      );
+    else
+      expect(regions[".auth-panel"].y).toBeGreaterThanOrEqual(
+        regions[".auth-intro"].y + regions[".auth-intro"].height - 1,
+      );
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
