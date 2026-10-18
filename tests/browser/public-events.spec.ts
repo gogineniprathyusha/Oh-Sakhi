@@ -17,7 +17,7 @@ test("missing configuration shows the branded homepage without sample events or 
   );
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Find your next plan" }),
+    page.getByRole("heading", { name: "Create, Connect, Celebrate" }),
   ).toBeVisible();
   await expect(page.getByRole("alert")).toContainText(
     "temporarily unavailable",
@@ -61,7 +61,9 @@ for (const width of [1440, 390, 320]) {
     await expect(page.locator(".event-meta")).toHaveText(
       "Wed, Jul 17 · 10:30 AM EDT",
     );
-    await expect(page.locator(".event-card")).not.toContainText("Richmond time");
+    await expect(page.locator(".event-card")).not.toContainText(
+      "Richmond time",
+    );
     await expect(
       page.getByText("You are hosting", { exact: true }),
     ).toHaveCount(0);

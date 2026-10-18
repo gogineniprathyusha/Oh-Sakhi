@@ -1,5 +1,5 @@
 import { Avatar } from "./Avatar.tsx";
-import { Bloom } from "./Bloom.tsx";
+import { Brand } from "./Brand.tsx";
 import { LegalLinks } from "./LegalLinks.tsx";
 import type { ReactNode } from "react";
 import type { Page } from "../features/events/types.ts";
@@ -69,13 +69,7 @@ export function Layout({
       <div className="app-shell" inert={modalOpen}>
         <aside className="sidebar">
           <a className="brand" href="#discover" onClick={home}>
-            <Bloom className="brand-flower" />
-            <span>
-              <span className="brand-wordmark">
-                her hobby <i>hour</i>
-              </span>
-              <small>oh sakhi! · your time, your circle</small>
-            </span>
+            <Brand />
           </a>
           <div className="menu-title">YOUR COMMUNITY</div>
           <nav aria-label="Community">{navigation()}</nav>
@@ -92,10 +86,7 @@ export function Layout({
         <div className="main">
           <header className="topbar">
             <a className="mobile-brand" href="#discover" onClick={home}>
-              <Bloom />{" "}
-              <span className="brand-wordmark">
-                her hobby <i>hour</i>
-              </span>
+              <Brand />
             </a>
             <div className="top-actions">
               {signedIn ? (

@@ -1,6 +1,6 @@
 # Her Hobby Hour — Oh Sakhi!
 
-Richmond’s women’s friendship and experiences community. The application uses **Vite, React and TypeScript**, the approved preview’s original CSS, and **Supabase Auth + PostgreSQL**. Signed-out visitors browse published events; members use real accounts and database-backed RSVPs.
+Richmond’s women’s friendship and experiences community. The application uses **Vite, React and TypeScript**, the approved cream/blush/burgundy visual design, and **Supabase Auth + PostgreSQL**. Signed-out visitors browse published events; members use real accounts and database-backed RSVPs.
 
 For a new coding session, start with [AGENTS.md](AGENTS.md) and the [project context](docs/project-context.md). The context records the current product rules, deployed website/email status and verification limits; older stage snapshots below may describe superseded setup states.
 
@@ -16,7 +16,7 @@ npm run dev
 
 Open the local URL printed by Vite, usually **http://localhost:5173**. Run these commands from **Oh Sakhi** itself; the redundant `her-hour-v3` directory has been removed. Existing terminals running the old project should be stopped with Control-C and restarted here.
 
-The hero, branding, navigation, event artwork and category filters retain the original interactive HTML design. Configure Supabase to load real events and enable accounts. Desktop and mobile style comparisons against the original preview are included in the browser tests.
+The hero, login pages, branding and event cards use the approved October 18 design, with HH artwork, cream/blush/burgundy colours and floral details. Existing desktop/mobile navigation and application workflows are retained. See [the visual refresh guide](docs/brand-refresh.md). Configure Supabase to load real events and enable accounts. Desktop and mobile style comparisons against the supplied new preview are included in the browser tests.
 
 ## Visitors and member accounts
 
@@ -136,7 +136,7 @@ npm run format     # Consistent source formatting
 
 Database tests use bundled PostgreSQL binaries and a fresh temporary database on loopback; they never read a remote database URL. Auth and Storage table interfaces are fixtures. The first group verifies the historical foundation, then the organiser-workflow migration is applied and current permissions are tested.
 
-Browser tests need Google Chrome and Playwright WebKit (`npx playwright install webkit`) and start isolated Vite servers on **5183 and 5184**. The Chrome project runs the full suite; the mobile WebKit project verifies brand colors and usable event/login controls at 320px, 390px and 440px. Brand artwork uses SVG to avoid device-dependent emoji rendering. The configured test server uses intercepted responses, not a real Supabase project. Optional reference tests read `~/Downloads/her-hour-interactive-preview.html`; override with `HER_HOUR_REFERENCE_HTML` if necessary. Screenshots/traces go into ignored `test-results/`.
+Browser tests need Google Chrome and Playwright WebKit (`npx playwright install webkit`) and start isolated Vite servers on **5183 and 5184**. The Chrome project runs the full suite; the mobile WebKit project verifies brand colors and usable event/login controls at 320px, 390px and 440px. Brand artwork uses SVG to avoid device-dependent emoji rendering. The configured test server uses intercepted responses, not a real Supabase project. Optional reference tests read `her-hobby-hour/home-preview.html`; set `HER_HOBBY_HOUR_DESIGN_DIR` to the supplied design folder if it is elsewhere. Screenshots/traces go into ignored `test-results/`.
 
 ## Remaining launch work
 

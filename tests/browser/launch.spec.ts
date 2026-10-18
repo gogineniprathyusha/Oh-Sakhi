@@ -53,7 +53,7 @@ test("footer and auth information links work, and keyboard users can skip naviga
 }) => {
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Find your next plan" }),
+    page.getByRole("heading", { name: "Create, Connect, Celebrate" }),
   ).toBeVisible();
   await page.keyboard.press("Tab");
   await expect(
@@ -67,7 +67,7 @@ test("footer and auth information links work, and keyboard users can skip naviga
     .getByRole("link", { name: "Back to community", exact: false })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Find your next plan" }),
+    page.getByRole("heading", { name: "Create, Connect, Celebrate" }),
   ).toBeVisible();
   await authMock(page);
   await page.goto(origin);
@@ -228,7 +228,7 @@ test("member homepage, event dialog and admin dashboard meet automated accessibi
 }) => {
   await eventMock(page);
   await expect(
-    page.getByRole("heading", { name: "Find your next plan" }),
+    page.getByRole("heading", { name: "Create, Connect, Celebrate" }),
   ).toBeVisible();
   let scan = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21aa"])

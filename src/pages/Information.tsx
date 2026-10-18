@@ -1,5 +1,5 @@
 import { LegalLinks } from "../components/LegalLinks.tsx";
-import { Bloom } from "../components/Bloom.tsx";
+import { Brand } from "../components/Brand.tsx";
 import { useEffect } from "react";
 import { informationPages, type InformationPage } from "../lib/information.ts";
 export function Information({ page }: { page: InformationPage }) {
@@ -13,10 +13,7 @@ export function Information({ page }: { page: InformationPage }) {
       </a>
       <header className="information-header">
         <a className="brand" href="/">
-          <Bloom />{" "}
-          <span className="brand-wordmark">
-            her hobby <i>hour</i>
-          </span>
+          <Brand />
         </a>
         <a className="link-btn" href="/">
           ← Back to community

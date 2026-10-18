@@ -35,24 +35,40 @@ export function Discover({
   return (
     <div className="content discover-content">
       <section className="hero">
-        <Bloom className="hero-bloom" />
         <div className="hero-copy">
-          <div className="eyebrow">A COMMUNITY FOR WOMEN · RICHMOND, VA</div>
+          <div className="eyebrow">HOBBIES ♥ FRIENDSHIPS ♥ A BRIGHTER YOU</div>
           <h1>
-            Good things happen
+            A Beautiful Space
             <br />
-            when women <i>connect.</i>
+            <i>for Her ♡</i>
           </h1>
           <p>
-            Less scrolling, more living. Discover small-group experiences, make
-            meaningful connections, and find your kind of people.
+            Her Hobby Hour — Oh Sakhi! is a women’s lifestyle and social
+            community where hobbies spark friendships, creativity meets
+            conversation, and every woman finds her happy hour.
           </p>
+          <button className="btn hero-cta" onClick={create}>
+            Host your first experience →
+          </button>
+          <div className="hero-benefits">
+            <span>♡ Real connections</span>
+            <span>✿ Meaningful experiences</span>
+            <span>♥ A happier, more you</span>
+          </div>
         </div>
+        <img
+          className="hero-logo"
+          src="/brand/hh-artwork.webp"
+          alt="Her Hobby Hour artwork: a woman enjoying coffee beside the HH clock monogram"
+          width="1254"
+          height="1254"
+          fetchPriority="high"
+        />
       </section>
       <div className="heading-row">
         <div>
-          <span className="eyebrow">YOUR NEXT CHAPTER STARTS HERE</span>
-          <h2>Find your next plan</h2>
+          <span className="eyebrow">UPCOMING EXPERIENCES · RICHMOND, VA</span>
+          <h2>Create, Connect, Celebrate</h2>
         </div>
         <button className="btn btn-outline" onClick={create}>
           + Create a plan

@@ -1,6 +1,7 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import { authMock, origin } from "./helpers/auth.ts";
 import { eventState } from "./helpers/events.ts";
+import AxeBuilder from "@axe-core/playwright";
 
 // The reported iPhone bug paints an opaque green emoji in brand artwork.
 // Check rendered pixels rather than relying on the browser's computed text color.
@@ -28,7 +29,7 @@ async function expectBrandColors(page: Page, region: Locator) {
   ).toBe(0);
 }
 
-for (const width of [320, 390, 440]) {
+for (const width of [320, 390, 440, 1440]) {
   test(`brand artwork keeps its colors and account/event controls work at ${width}px`, async ({
     page,
   }, testInfo) => {
@@ -54,15 +55,22 @@ for (const width of [320, 390, 440]) {
     await expect(page.locator(".event-card")).toHaveCount(1);
     await page.evaluate(() => document.fonts.ready);
     await expect(page).toHaveTitle(/Her Hobby Hour — Oh Sakhi!/);
-    await expect(page.locator(".topbar .mobile-brand")).toHaveText(
-      "her hobby hour",
+    const brand = page.locator(
+      width > 750 ? ".sidebar .brand" : ".topbar .mobile-brand",
+    );
+    await expect(brand).toHaveText("Her Hobby HourOh Sakhi!");
+    await expect(brand.locator("img")).toHaveJSProperty("naturalWidth", 465);
+    await expect(page.locator(".hero-logo")).toHaveJSProperty(
+      "naturalWidth",
+      1254,
     );
     await expect(page.locator(".event-card")).toContainText(
       "Her Hobby Hour host",
     );
-    await expectBrandColors(page, page.locator(".topbar .mobile-brand"));
+    await expectBrandColors(page, brand);
     await expectBrandColors(page, page.locator(".hero"));
     await expectBrandColors(page, page.locator(".event-art"));
+    await page.evaluate(() => scrollTo(0, 0));
     await page.screenshot({
       path: testInfo.outputPath(`homepage-${width}.png`),
       fullPage: true,
@@ -85,13 +93,16 @@ for (const width of [320, 390, 440]) {
     await expect(
       page.getByRole("heading", { name: "Welcome back" }),
     ).toBeVisible();
-    await expect(page.locator(".auth-intro h1")).toHaveText("her hobby hour.");
+    await expect(page.locator(".auth-intro h1")).toHaveText(
+      "Her Hobby Hour — Oh Sakhi!",
+    );
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
     await expectBrandColors(page, page.locator(".auth-intro"));
+    await page.evaluate(() => scrollTo(0, 0));
     await page.screenshot({
       path: testInfo.outputPath(`login-${width}.png`),
       fullPage: true,
@@ -111,7 +122,7 @@ for (const width of [320, 390, 440]) {
       "Privacy Policy | Her Hobby Hour — Oh Sakhi!",
     );
     await expect(page.locator(".information-header .brand")).toHaveText(
-      "her hobby hour",
+      "Her Hobby HourOh Sakhi!",
     );
     await expectBrandColors(page, page.locator(".information-header .brand"));
     expect(
@@ -122,3 +133,47 @@ for (const width of [320, 390, 440]) {
     expect(errors).toEqual([]);
   });
 }
+
+test("hero hosting actions keep the login gate and auth modes remain accessible", async ({
+  page,
+}, testInfo) => {
+  await authMock(page);
+  await page.goto(origin);
+  await page
+    .getByRole("button", { name: "Host your first experience" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Welcome back" }),
+  ).toBeVisible();
+  for (const mode of ["login", "signup", "reset"] as const) {
+    if (mode === "signup")
+      await page
+        .getByRole("button", { name: "Create account", exact: true })
+        .click();
+    if (mode === "reset") {
+      await page.getByRole("button", { name: "Back to login" }).click();
+      await page.getByRole("button", { name: "Forgot password?" }).click();
+    }
+    await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
+    const scan = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+      .analyze();
+    expect(
+      scan.violations.map(({ id, nodes }) => ({
+        id,
+        targets: nodes.map((node) => node.target),
+      })),
+    ).toEqual([]);
+    await page.screenshot({
+      path: testInfo.outputPath(`auth-${mode}.png`),
+      fullPage: true,
+    });
+  }
+  await page.getByRole("button", { name: "Back to experiences" }).click();
+  await page
+    .getByRole("button", { name: "+ Create a plan", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Welcome back" }),
+  ).toBeVisible();
+});

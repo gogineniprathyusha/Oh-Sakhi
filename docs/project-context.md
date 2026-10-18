@@ -1,8 +1,6 @@
 # Her Hobby Hour project context
 
-Last updated: **October 18, 2026**, after organiser emails were merged through PR #13 and local `main` was updated to `4a0feee`. This is a dated handoff for a new coding session. Inspect current source/Git state and verify relevant hosted configuration before acting; this file does not provide live service state or the entire prior conversation.
-
-Subsequent member spot-cancellation work and the handoff documents are on **`feature/rsvp-withdrawal-emails`**, with the backend extension already deployed/enabled. At this update they have not been pushed or merged into `main`; inspect current Git state rather than assuming this branch status remains unchanged.
+Last updated: **October 18, 2026**, during the approved login/home brand refresh on `feature/hh-brand-refresh`, based on `main` at `109c890` (PR #14). The handoff and member spot-cancellation work are now merged into `main`; the brand refresh is local implementation work. This is a dated handoff. Inspect current source/Git state and verify relevant hosted configuration before acting.
 
 ## Project and repository
 
@@ -12,7 +10,7 @@ Subsequent member spot-cancellation work and the handoff documents are on **`fea
 - Repository: <https://github.com/gogineniprathyusha/Oh-Sakhi>.
 - Root application: `/Users/abhi/Documents/Oh Sakhi`; the old `her-hour-v3` wrapper was removed. Run development commands from this root.
 - Frontend: Vite 7, React 19, TypeScript, existing project CSS. Backend: Supabase Auth, PostgreSQL/RLS, Storage and TypeScript/Deno Edge Functions. Email provider: Resend.
-- The owner requested one consistent stack and preservation of the original interactive HTML design. The source preview was `~/Downloads/her-hour-interactive-preview.html`; tests can use `HER_HOUR_REFERENCE_HTML` to locate it.
+- The owner requested one consistent stack. The October 18 visual refresh adopts the supplied `her-hobby-hour/` login/home design, large HH artwork, compact HH icon, cream/blush/burgundy palette and floral details in the root React app. Existing workflows and desktop/mobile navigation are retained. See [brand-refresh.md](brand-refresh.md). The earlier Downloads HTML preview is superseded as the visual reference.
 
 ## Current product rules
 
@@ -32,6 +30,8 @@ Subsequent member spot-cancellation work and the handoff documents are on **`fea
 | Unimplemented       | My circle does not implement connections/private messaging. Stage G growth features are not implemented.                                                                                             |
 
 Richmond times use `America/New_York`, independent of the visitor's browser timezone. The UI shows EDT or EST for the selected/event date, and rejects ambiguous or nonexistent daylight-saving wall times. The time control is the native input after a requested custom-control reversion. Event descriptions appear between location and organiser attribution.
+
+Login navigation participates in browser history: Back from a hosting/login gate returns to discovery, Forward/reload restores the auth screen, and switching signup/reset modes does not stack extra entries. Back to experiences consumes an in-app auth entry; direct recovery callbacks are dismissed in place. No credentials or form values are stored in history.
 
 Demo mode and sample events were deliberately removed. A missing/invalid Supabase configuration yields a service-unavailable state; do not restore a demo fallback.
 
@@ -164,12 +164,17 @@ npm run test:e2e         # Playwright Chrome + selected mobile WebKit tests
 npm run build            # Type checks and Vite production bundle in dist/
 ```
 
-Browser tests start fixture-backed Vite servers on 5183/5184. They need Chrome and Playwright WebKit. The optional original-design reference checks skip when the local HTML preview is absent. `.env.local`, `dist/`, screenshots/traces and test output are ignored; keep them out of commits.
+Browser tests start fixture-backed Vite servers on 5183/5184. They need Chrome and Playwright WebKit. The optional approved-design comparisons use `HER_HOBBY_HOUR_DESIGN_DIR` (default `her-hobby-hour/`) and skip when that supplied folder is absent. `.env.local`, `dist/`, screenshots/traces and test output are ignored; keep them out of commits.
+
+Visual refresh verification on October 18: TypeScript/ESLint, **37 unit tests**, **85 fixture-backed browser checks** (Chrome and selected mobile WebKit, including the new supplied design comparisons), production build and diff formatting passed. Desktop/mobile home and login screenshots were reviewed. No database/function implementation changed, and no hosted writes or emails were performed; database and Deno checks were not rerun for this frontend change. See [brand-refresh.md](brand-refresh.md).
+
+Browser-history follow-up on October 18: reproduced Contact → community → hosting/login → browser Back returning to Contact before the fix. After the fix, **46 targeted fixture-backed browser checks** passed in Chrome and mobile WebKit, including both hosting buttons, Back/Forward, auth-mode changes, reloads, direct recovery dismissal and event-email links. TypeScript/ESLint, all **37 unit tests**, the production build and diff formatting also passed. The full browser suite was not rerun for this follow-up; no hosted writes or emails were performed.
 
 Last recorded full non-browser verification for the member spot-cancellation implementation: **37 unit tests**, **58 real PostgreSQL tests**, TypeScript/ESLint, Deno function checks and production build passed. Earlier browser/email-link and mobile verification is documented separately; the full browser suite was not rerun for the cancellation-template extensions. Counts are historical evidence, not a requirement to freeze the suite at those numbers.
 
 ## Detailed documents and known historical wording
 
+- [Current visual identity and design verification](brand-refresh.md)
 - [Authentication verification](authentication-verification.md)
 - [Member profiles and public photos](member-profiles.md)
 - [Event workflow and covers](stage-c-events.md)

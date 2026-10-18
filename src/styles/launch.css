@@ -2,10 +2,6 @@
 .event-footer span {
   color: var(--muted);
 }
-:root {
-  --muted: #74636e;
-  --dust: #8c5e76;
-}
 .skip-link {
   position: fixed;
   top: 10px;
@@ -21,7 +17,7 @@
   transform: translateY(0);
 }
 :focus-visible {
-  outline: 3px solid #aa7891;
+  outline: 3px solid var(--wine);
   outline-offset: 4px;
 }
 .legal-links {

@@ -1,4 +1,4 @@
-// Category artwork retains the original Oh Sakhi visual design.
+// Category artwork uses the approved cream, blush and rose palette.
 export const categories = [
   "Coffee",
   "Wellness",
@@ -7,11 +7,11 @@ export const categories = [
   "Social",
 ] as const;
 export const themes: Record<string, [string, string, string]> = {
-  Coffee: ["☕", "#dcc4bb", "#f5e5da"],
-  Wellness: ["🌿", "#c5d5c4", "#e9ede1"],
-  Food: ["🍝", "#d6a7a7", "#f7d4c8"],
-  Creative: ["🎨", "#e0c3b0", "#f2e1cc"],
-  Social: ["✨", "#c8b4cb", "#eee0ef"],
+  Coffee: ["☕", "#f8c6cd", "#fde7e4"],
+  Wellness: ["🌿", "#fde7e4", "#fdf6f2"],
+  Food: ["🍝", "#e49cae", "#fde7e4"],
+  Creative: ["🎨", "#fde7e4", "#f8c6cd"],
+  Social: ["✨", "#f8c6cd", "#fff1ee"],
 };
 
 export function today() {

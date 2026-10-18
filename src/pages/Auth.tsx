@@ -3,7 +3,6 @@ import { supabase } from "../lib/supabase.ts";
 import { withoutAuthCallback } from "../lib/auth-callback.ts";
 import type { AuthMode } from "../features/events/types.ts";
 import { LegalLinks } from "../components/LegalLinks.tsx";
-import { Bloom } from "../components/Bloom.tsx";
 export function Auth({
   mode,
   setMode,
@@ -31,6 +30,14 @@ export function Auth({
     signup: "Create my account",
     reset: "Send reset link",
     update: "Save new password",
+  };
+  const subtitles = {
+    login:
+      "Welcome back to your circle—where hobbies bloom into friendships and a little time becomes a happier you.",
+    signup:
+      "Create your space for meaningful friendships, hobbies, and beautiful experiences.",
+    reset: "Enter your email and we’ll help you get back to your circle.",
+    update: "Choose a secure new password and step back into your happy hour.",
   };
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -105,127 +112,157 @@ export function Auth({
     }
   }
   return (
-    <div className="auth-layout">
-      <div className="auth-intro">
-        <div className="eyebrow">HER HOBBY HOUR · OH SAKHI! · RICHMOND</div>
-        <h1>
-          her hobby <i>hour.</i>
-        </h1>
-        <p>
-          Oh Sakhi! Your hour, your circle. Find experiences, make new friends,
-          and belong.
-        </p>
-        <Bloom className="auth-bloom" />
-      </div>
-      <main className="auth-panel">
-        <div className="auth-card">
-          <button className="link-btn auth-back" onClick={back} disabled={busy}>
-            ← Back to experiences
-          </button>
-          <br />
-          <span className="eyebrow">YOUR NEXT CHAPTER STARTS HERE</span>
-          <h2>{titles[mode]}</h2>
-          <p
-            className="section-intro"
-            role={notice ? (isError ? "alert" : "status") : undefined}
-          >
-            {notice || "Find experiences, make new friends, and belong."}
-          </p>
-          <form onSubmit={submit}>
-            {mode === "signup" && (
-              <div className="field">
-                <label htmlFor="signup-name">Display name</label>
-                <input
-                  id="signup-name"
-                  name="name"
-                  required
-                  maxLength={60}
-                  autoComplete="nickname"
-                />
-              </div>
-            )}
-            {mode !== "update" && (
-              <div className="field">
-                <label htmlFor="auth-email">Email</label>
-                <input
-                  id="auth-email"
-                  name="email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                />
-              </div>
-            )}
-            {mode !== "reset" && (
-              <div className="field">
-                <label htmlFor="auth-password">Password</label>
-                <input
-                  id="auth-password"
-                  name="password"
-                  type="password"
-                  minLength={8}
-                  required
-                  autoComplete={
-                    mode === "login" ? "current-password" : "new-password"
-                  }
-                  placeholder="At least 8 characters"
-                />
-              </div>
-            )}
-            <button className="btn full-width" type="submit" disabled={busy}>
-              {busy ? "Please wait…" : buttons[mode]}
-            </button>
-          </form>
-          <div className="auth-links">
-            {mode === "login" ? (
-              <>
-                <button
-                  className="link-btn"
-                  disabled={busy}
-                  onClick={() => {
-                    setNotice("");
-                    setIsError(false);
-                    setMode("signup");
-                  }}
-                >
-                  Create account
-                </button>
-                <button
-                  className="link-btn"
-                  disabled={busy}
-                  onClick={() => {
-                    setNotice("");
-                    setIsError(false);
-                    setMode("reset");
-                  }}
-                >
-                  Forgot password?
-                </button>
-              </>
-            ) : (
-              mode !== "update" && (
-                <button
-                  className="link-btn"
-                  disabled={busy}
-                  onClick={() => {
-                    setNotice("");
-                    setIsError(false);
-                    setMode("login");
-                  }}
-                >
-                  Back to login
-                </button>
-              )
-            )}
+    <div className="auth-stage">
+      <div className="auth-layout">
+        <div className="auth-intro">
+          <h1 className="visually-hidden">Her Hobby Hour — Oh Sakhi!</h1>
+          <img
+            className="auth-logo"
+            src="/brand/hh-artwork.webp"
+            alt="A woman enjoying coffee beside the HH clock monogram"
+            width="1254"
+            height="1254"
+            fetchPriority="high"
+          />
+          <p className="brand-promise">A LITTLE TIME FOR A HAPPIER YOU</p>
+          <div className="brand-values">
+            CREATE <span>♥</span> LEARN <span>♥</span> CONNECT <span>♥</span>{" "}
+            BELONG
           </div>
-          <p className="small muted">
-            By joining, you agree to be respectful of other members. Do not
-            share sensitive information in public meetup descriptions.
-          </p>
-          <LegalLinks />
         </div>
-      </main>
+        <main className="auth-panel">
+          <div className="auth-card">
+            <button
+              className="link-btn auth-back"
+              onClick={back}
+              disabled={busy}
+            >
+              ← Back to experiences
+            </button>
+            <img
+              className="auth-icon"
+              src="/brand/hh-icon.webp"
+              alt=""
+              width="465"
+              height="490"
+            />
+            <h2>{titles[mode]}</h2>
+            <p
+              className={`auth-subtitle${notice ? " auth-notice" : ""}`}
+              role={notice ? (isError ? "alert" : "status") : undefined}
+            >
+              {notice || subtitles[mode]}
+            </p>
+            <form onSubmit={submit}>
+              {mode === "signup" && (
+                <div className="field">
+                  <label className="visually-hidden" htmlFor="signup-name">
+                    Display name
+                  </label>
+                  <input
+                    id="signup-name"
+                    name="name"
+                    required
+                    maxLength={60}
+                    autoComplete="nickname"
+                    placeholder="Display name"
+                  />
+                </div>
+              )}
+              {mode !== "update" && (
+                <div className="field">
+                  <label className="visually-hidden" htmlFor="auth-email">
+                    Email
+                  </label>
+                  <input
+                    id="auth-email"
+                    name="email"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    placeholder="Email address"
+                  />
+                </div>
+              )}
+              {mode !== "reset" && (
+                <div className="field">
+                  <label className="visually-hidden" htmlFor="auth-password">
+                    Password
+                  </label>
+                  <input
+                    id="auth-password"
+                    name="password"
+                    type="password"
+                    minLength={8}
+                    required
+                    autoComplete={
+                      mode === "login" ? "current-password" : "new-password"
+                    }
+                    placeholder="Password (8+ characters)"
+                  />
+                </div>
+              )}
+              {mode === "login" && (
+                <div className="auth-forgot">
+                  <button
+                    type="button"
+                    className="link-btn"
+                    disabled={busy}
+                    onClick={() => {
+                      setNotice("");
+                      setIsError(false);
+                      setMode("reset");
+                    }}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              )}
+              <button className="btn full-width" type="submit" disabled={busy}>
+                {busy ? "Please wait…" : buttons[mode]}
+              </button>
+            </form>
+            <div className="auth-links">
+              {mode === "login" ? (
+                <>
+                  <div className="auth-or" aria-hidden="true">
+                    or
+                  </div>
+                  <button
+                    className="btn btn-outline full-width auth-register"
+                    disabled={busy}
+                    onClick={() => {
+                      setNotice("");
+                      setIsError(false);
+                      setMode("signup");
+                    }}
+                  >
+                    Create account
+                  </button>
+                </>
+              ) : (
+                mode !== "update" && (
+                  <button
+                    className="link-btn"
+                    disabled={busy}
+                    onClick={() => {
+                      setNotice("");
+                      setIsError(false);
+                      setMode("login");
+                    }}
+                  >
+                    Back to login
+                  </button>
+                )
+              )}
+            </div>
+            <p className="auth-terms">
+              A women’s space to create, connect, learn, and belong.
+            </p>
+            <LegalLinks />
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

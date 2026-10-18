@@ -240,7 +240,7 @@ test("failed reads clear sensitive lists, recover on retry, and role revocation 
     .click();
   await expect(page.locator('[data-page="admin"]')).toHaveCount(0);
   await expect(
-    page.getByRole("heading", { name: "Find your next plan" }),
+    page.getByRole("heading", { name: "Create, Connect, Celebrate" }),
   ).toBeVisible();
 });
 test("organisers can export their own attendees without acquiring admin navigation", async ({

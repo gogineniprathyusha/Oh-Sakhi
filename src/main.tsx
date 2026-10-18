@@ -4,6 +4,7 @@ import "./styles/base.css";
 import "./styles/community.css";
 import "./styles/admin.css";
 import "./styles/launch.css";
+import "./styles/brand.css";
 import { informationPage } from "./lib/information.ts";
 import { ErrorBoundary } from "./components/ErrorBoundary.tsx";
 const Information = lazy(() =>

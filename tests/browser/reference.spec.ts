@@ -1,26 +1,26 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { existsSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { resolve, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { eventMock } from "./helpers/events.ts";
 
-// Optional comparison against the original, unmodified design supplied by the owner.
-const reference =
-  process.env.HER_HOUR_REFERENCE_HTML ||
-  join(homedir(), "Downloads", "her-hour-interactive-preview.html");
+// Optional comparison with the owner's new visual reference, preserved outside app source.
+const referenceDirectory = resolve(
+  process.env.HER_HOBBY_HOUR_DESIGN_DIR || "her-hobby-hour",
+);
 
 for (const width of [1440, 390]) {
-  test(`reference design styles match at ${width}px`, async ({ page }) => {
+  test(`approved brand styles match the new reference at ${width}px`, async ({
+    page,
+  }, testInfo) => {
+    const reference = join(referenceDirectory, "home-preview.html");
     test.skip(
       !existsSync(reference),
-      "Set HER_HOUR_REFERENCE_HTML to the supplied preview file to run this comparison.",
+      "Set HER_HOBBY_HOUR_DESIGN_DIR to the supplied design folder.",
     );
     const original = await page.context().newPage();
-    for (const tab of [page, original]) {
+    for (const tab of [page, original])
       await tab.setViewportSize({ width, height: 1000 });
-      await tab.clock.setFixedTime(new Date("2026-10-13T16:00:00Z"));
-    }
     await original.goto(pathToFileURL(reference).href);
     await eventMock(page);
     await expect(page.locator(".event-card")).toHaveCount(1);
@@ -28,46 +28,35 @@ for (const width of [1440, 390]) {
       page.evaluate(() => document.fonts.ready),
       original.evaluate(() => document.fonts.ready),
     ]);
-    const selectors = {
-      ".hero": ["backgroundImage", "borderRadius", "minHeight"],
-      ".hero h1": [
-        "fontFamily",
-        "fontSize",
-        "lineHeight",
-        "fontWeight",
-        "letterSpacing",
-        "color",
-      ],
-      ".hero p": ["fontFamily", "fontSize", "lineHeight", "color"],
-      ".grid": ["gap"],
-      ".event-art": ["height", "backgroundImage"],
-      ".event-card": ["borderRadius", "boxShadow"],
-      ".brand": ["fontSize", "fontFamily", "letterSpacing"],
-      ".sidebar": ["width", "backgroundColor", "padding"],
-      ".btn": ["borderRadius", "fontSize", "fontWeight", "backgroundColor"],
-    };
-    const readStyles = (tab: Page) =>
-      tab.evaluate(
-        (map: Record<string, string[]>) =>
-          Object.fromEntries(
-            Object.entries(map).map(([selector, properties]) => {
-              const style = getComputedStyle(document.querySelector(selector)!);
-              return [
-                selector,
-                Object.fromEntries(
-                  properties.map((property) => [
-                    property,
-                    style[property as keyof CSSStyleDeclaration],
-                  ]),
-                ),
-              ];
-            }),
-          ),
-        selectors,
-      );
-    expect(await readStyles(page)).toEqual(await readStyles(original));
+    // Navigation, real event data and responsive sizing retain the current app's behavior.
+    for (const [actual, expected, properties] of [
+      ["body", "body", ["fontFamily", "backgroundColor", "color"]],
+      [".hero h1", ".hero h1", ["fontFamily", "color"]],
+      [".hero-cta", ".btn", ["backgroundColor", "borderRadius"]],
+      [".event-card h3", ".event h4", ["fontFamily", "color"]],
+    ] as const) {
+      const read = (selector: string, tab: typeof page) =>
+        tab
+          .locator(selector)
+          .first()
+          .evaluate(
+            (element, keys) => {
+              const style = getComputedStyle(element);
+              return Object.fromEntries(
+                keys.map((key) => [
+                  key,
+                  key === "fontFamily"
+                    ? style.fontFamily.split(",")[0]
+                    : style[key as keyof CSSStyleDeclaration],
+                ]),
+              );
+            },
+            [...properties],
+          );
+      expect(await read(actual, page)).toEqual(await read(expected, original));
+    }
     await original.screenshot({
-      path: `test-results/reference-${width}.png`,
+      path: testInfo.outputPath(`approved-reference-${width}.png`),
       fullPage: true,
     });
     await original.close();
