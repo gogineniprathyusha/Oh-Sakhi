@@ -2,6 +2,8 @@
 
 Last updated: **October 18, 2026**, after organiser emails were merged through PR #13 and local `main` was updated to `4a0feee`. This is a dated handoff for a new coding session. Inspect current source/Git state and verify relevant hosted configuration before acting; this file does not provide live service state or the entire prior conversation.
 
+Subsequent member spot-cancellation work and the handoff documents are on **`feature/rsvp-withdrawal-emails`**, with the backend extension already deployed/enabled. At this update they have not been pushed or merged into `main`; inspect current Git state rather than assuming this branch status remains unchanged.
+
 ## Project and repository
 
 - Product: **Her Hobby Hour — Oh Sakhi!** Previously called Her Hour; historical names still occur in immutable migrations, compatibility checks and reference-test filenames.
@@ -59,7 +61,7 @@ Demo mode and sample events were deliberately removed. A missing/invalid Supabas
 
 ## Supabase migrations and functions
 
-All **16 migration files currently in root `supabase/migrations/`**, through **`202610180004_organiser_cancellation_emails.sql`**, were applied to the configured project as of this handoff. Earlier migrations were applied manually/through SQL Editor or Management API. Do not blindly run `db push` or replay initial migrations against this project; reconcile actual applied state first. For a fresh project, use files in filename order and the documented function/setup rollout sequences.
+All **17 migration files currently in root `supabase/migrations/`**, through **`202610180005_rsvp_cancellation_emails.sql`**, were applied to the configured project as of this handoff. Earlier migrations were applied manually/through SQL Editor or Management API. Do not blindly run `db push` or replay initial migrations against this project; reconcile actual applied state first. For a fresh project, use files in filename order and the documented function/setup rollout sequences.
 
 Important follow-ups to historical migrations:
 
@@ -73,6 +75,7 @@ Important follow-ups to historical migrations:
 - `202610180002_event_emails.sql`: private transactional queue, revisions/generations and worker/webhook RPCs.
 - `202610180003_organiser_emails.sql`: publication and new-attendee messages.
 - `202610180004_organiser_cancellation_emails.sql`: organiser's own cancellation confirmation.
+- `202610180005_rsvp_cancellation_emails.sql`: member spot-cancellation confirmation, safe rejoining and current-details refresh.
 
 Deployed Edge Functions:
 
@@ -108,6 +111,7 @@ Webhook: `https://znuzfxbedoyuqpksvbcr.supabase.co/functions/v1/email-webhook`, 
 | Your event is published              | The organiser on a real publication transition                                                                            |
 | Someone joined your event            | The organiser on a new confirmed registration; includes attendee display name, never attendee contact email               |
 | Your event cancellation is confirmed | The organiser when cancelling their own event, including drafts/events with no attendees; repeated Cancel does not resend |
+| Your spot cancellation is confirmed  | The member who cancels their own confirmed seat; whole-event closure uses its separate notice                             |
 
 Description/title/cover/capacity edits do not trigger schedule-update emails. Organiser cancellation confirmation does not claim asynchronous attendee mail has already arrived. Admin removal is not described as the organiser's own cancellation. Ordinary organisers receive their notices without having their own attendee RSVP.
 
@@ -117,14 +121,17 @@ Hosted setup/activation scripts already applied:
 - `supabase/setup/enable_event_emails.sql`.
 - `supabase/setup/enable_organiser_emails.sql`.
 - `supabase/setup/enable_organiser_cancellation_emails.sql`.
+- `supabase/setup/enable_rsvp_cancellation_emails.sql`.
 
-At last verification, `private.email_config` had **`enabled=true`**, **`organiser_enabled=true`** and **`organiser_cancellation_enabled=true`**. Scheduler jobs: `event-emails-every-minute` (`* * * * *`) and `event-email-retention` (`15 8 * * *`). These run on Supabase; no open browser or Vercel backend process is needed. Jobs normally submit during the next minute, with queue/provider delays possible.
+At last verification, `private.email_config` had **`enabled=true`**, **`organiser_enabled=true`**, **`organiser_cancellation_enabled=true`** and **`rsvp_cancellation_enabled=true`**. Scheduler jobs: `event-emails-every-minute` (`* * * * *`) and `event-email-retention` (`15 8 * * *`). These run on Supabase; no open browser or Vercel backend process is needed. Jobs normally submit during the next minute, with queue/provider delays possible.
 
 Messages queue in the same transaction as the relevant action. Delivery uses row leases/`SKIP LOCKED`, single recipients, frozen provider payloads, stable idempotency keys, bounded retries and a 23-hour retry cutoff. Eligibility is rechecked before send; suppression handles bounces/complaints. An email already in flight cannot be recalled. See the Stage F guide before modifying retry, pause or suppression behavior.
 
 Live checks on October 18 used explicitly approved owned inboxes and labelled events. The owner confirmed attendee confirmation/update/reminder/cancellation, organiser publication/join, and organiser cancellation messages arrived. Signed webhooks recorded delivery. Repeated publication/RSVP/cancellation calls did not duplicate notices. Test events were cancelled, seats released, history retained and pending test work cleared. These approvals do not authorize further test messages to those or other addresses without an agreed scope.
 
-Git/Vercel changes do not automatically migrate Supabase or deploy functions. The Stage F backend was separately deployed/enabled before PR #13; fetching main requires no migration replay.
+Member spot-cancellation email (`rsvp_cancelled`) is now implemented with migration `202610180005` and its activation script applied. It confirms only the reservation withdrawal, does not notify the organiser of withdrawal, and is independent of organiser delivery switches. Rejoining invalidates an unsent/leased notice; whole-event closure, recipient eligibility and suppression are rechecked before submission. A separately approved five-email test passed actual scheduler/signed-webhook delivery and owner-confirmed inbox receipt, including exactly one spot-cancellation confirmation despite repeated withdrawal. The test event is cancelled with history preserved, zero occupied seats and no pending jobs. See the Stage F guide for details.
+
+Git/Vercel changes do not automatically migrate Supabase or deploy functions. The initial attendee/organiser email backend was deployed/enabled before PR #13; the member spot-cancellation extension was separately deployed during this follow-up. Both have already been applied to the configured project; fetching the corresponding Git changes requires no migration replay there.
 
 ## Code map and commands
 
@@ -159,7 +166,7 @@ npm run build            # Type checks and Vite production bundle in dist/
 
 Browser tests start fixture-backed Vite servers on 5183/5184. They need Chrome and Playwright WebKit. The optional original-design reference checks skip when the local HTML preview is absent. `.env.local`, `dist/`, screenshots/traces and test output are ignored; keep them out of commits.
 
-Last recorded full non-browser verification for the organiser cancellation implementation: **36 unit tests**, **57 real PostgreSQL tests**, TypeScript/ESLint, Deno function checks and production build passed. Earlier browser/email-link and mobile verification is documented separately; the full browser suite was not rerun for the cancellation-template extension. Counts are historical evidence, not a requirement to freeze the suite at those numbers.
+Last recorded full non-browser verification for the member spot-cancellation implementation: **37 unit tests**, **58 real PostgreSQL tests**, TypeScript/ESLint, Deno function checks and production build passed. Earlier browser/email-link and mobile verification is documented separately; the full browser suite was not rerun for the cancellation-template extensions. Counts are historical evidence, not a requirement to freeze the suite at those numbers.
 
 ## Detailed documents and known historical wording
 

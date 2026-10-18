@@ -18,7 +18,8 @@ export type EmailJob = {
     | "reminder"
     | "organiser_published"
     | "organiser_rsvp"
-    | "organiser_cancelled";
+    | "organiser_cancelled"
+    | "rsvp_cancelled";
   event: EmailEvent;
   previous_event: EmailEvent | null;
   email: string;
@@ -61,6 +62,7 @@ export function emailPayload(job: EmailJob, settings: EmailSettings) {
     organiser_published: "Your event is published",
     organiser_rsvp: "Someone joined your event",
     organiser_cancelled: "Your event cancellation is confirmed",
+    rsvp_cancelled: "Your spot cancellation is confirmed",
   };
   const introductions = {
     confirmation: "You have a confirmed seat. We look forward to seeing you!",
@@ -75,6 +77,8 @@ export function emailPayload(job: EmailJob, settings: EmailSettings) {
     organiser_rsvp: `${e.attendee_name || "A member"} has a confirmed seat. Open your event to view the attendee list.`,
     organiser_cancelled:
       "Your cancellation is confirmed. This event is no longer open for RSVPs, and its seats have been released.",
+    rsvp_cancelled:
+      "Your RSVP has been cancelled and your seat has been released. This cancels only your reservation; the event itself has not been cancelled. You can reserve again if registration is open and a seat is available.",
   };
   const url = new URL(settings.appUrl);
   if (url.protocol !== "https:" || url.username || url.password)
@@ -96,7 +100,9 @@ export function emailPayload(job: EmailJob, settings: EmailSettings) {
     job.kind === "organiser_cancelled";
   const footer = organiser
     ? "Sign in with your organiser account to view or manage this event."
-    : "Sign in with the account used for your RSVP. To stop updates for an active event, cancel your RSVP in My plans.";
+    : job.kind === "rsvp_cancelled"
+      ? "Sign in with the account used for your RSVP to view this event and your reservation history in My plans."
+      : "Sign in with the account used for your RSVP. To stop updates for an active event, cancel your RSVP in My plans.";
   const linkLabel =
     job.kind === "organiser_cancelled"
       ? "View cancelled event"

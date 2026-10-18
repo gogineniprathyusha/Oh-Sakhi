@@ -4217,6 +4217,423 @@ test("organiser cancellation upgrade confirms only own transitions and retains a
   await close(db);
 });
 
+test("seat cancellation emails upgrade safely, follow member intent and preserve whole-event notifications", async () => {
+  const database = "rsvp_cancellation_tests";
+  await cluster.createDatabase(database);
+  const db = await connection(database);
+  await db.query(schemaFixture);
+  await migrate(
+    db,
+    (await readdir(migrationDir))
+      .filter((f) => f.endsWith(".sql") && f < "202610180005")
+      .sort(),
+  );
+  for (const name of ["host", "alice", "bea", "admin"])
+    await db.query(
+      "insert into auth.users(id,email,email_confirmed_at) values($1,$2,now())",
+      [ids[name], `${name}@example.test`],
+    );
+  await db.query("insert into private.admin_roles(user_id) values($1)", [
+    ids.admin,
+  ]);
+  await db.query(
+    "update private.email_config set enabled=true,organiser_enabled=true,organiser_cancellation_enabled=true",
+  );
+  const makeEvent = async () => {
+    await db.query(
+      "delete from private.rate_limits where operation in ('submit_meetup','request_meetup')",
+    );
+    return (
+      await as(
+        "host",
+        (c) =>
+          c.query(
+            `insert into public.meetups
+      (host_id,title,category,event_date,event_time,starts_at,place,capacity,description)
+      values($1,'Seat cancellation test','Social','2099-10-21','10:30',now()+interval '3 days',
+      'Public cafe',4,'A gathering used to verify member seat cancellation emails.') returning *`,
+            [ids.host],
+          ),
+        database,
+      )
+    ).rows[0];
+  };
+  const call = (actor: string, fn: string, id: string) =>
+    as(actor, (c) => c.query(`select public.${fn}($1)`, [id]), database);
+  const list = async (id: string) =>
+    (
+      await db.query(
+        "select * from private.event_emails where meetup_id=$1 order by created_at,id",
+        [id],
+      )
+    ).rows;
+  const withdrawals = async (id: string) =>
+    (await list(id)).filter((j) => j.kind === "rsvp_cancelled");
+  const claim = async () =>
+    (await db.query("select public.claim_event_email() j")).rows[0].j;
+  const prepare = async (
+    j: { id: string; lease_token: string; email: string },
+    subject = "Seat cancelled",
+  ) =>
+    (
+      await db.query("select public.prepare_event_email($1,$2,$3) body", [
+        j.id,
+        j.lease_token,
+        {
+          from: "events@example.test",
+          to: [j.email],
+          reply_to: "contact@example.test",
+          subject,
+          text: "Test",
+          html: "<p>Test</p>",
+        },
+      ])
+    ).rows[0].body;
+  const discardPending = () =>
+    db.query(
+      "update private.event_emails set state='cancelled',lease_token=null,leased_until=null where state in ('queued','processing')",
+    );
+  const legacy = await makeEvent();
+  await call("alice", "request_meetup", legacy.id);
+  const oldJobs = (await list(legacy.id)).map((j) => j.id).sort();
+  await migrate(db, ["202610180005_rsvp_cancellation_emails.sql"]);
+  assert.deepEqual((await list(legacy.id)).map((j) => j.id).sort(), oldJobs);
+  assert.deepEqual(
+    (
+      await db.query(
+        "select enabled,organiser_enabled,organiser_cancellation_enabled,rsvp_cancellation_enabled from private.email_config",
+      )
+    ).rows[0],
+    {
+      enabled: true,
+      organiser_enabled: true,
+      organiser_cancellation_enabled: true,
+      rsvp_cancellation_enabled: false,
+    },
+  );
+  await call("alice", "withdraw_meetup_request", legacy.id);
+  assert.equal(
+    (await withdrawals(legacy.id)).length,
+    0,
+    "The migration starts new delivery disabled",
+  );
+  await db.query(
+    "update private.email_config set rsvp_cancellation_enabled=true,organiser_enabled=false",
+  );
+  await call("alice", "withdraw_meetup_request", legacy.id);
+  assert.equal(
+    (await withdrawals(legacy.id)).length,
+    0,
+    "Enabling does not replay old withdrawals",
+  );
+  await discardPending();
+  for (const actor of ["guest", "alice", "admin"])
+    await denied(() =>
+      as(actor, (c) => c.query("select * from private.event_emails"), database),
+    );
+  assert.equal(
+    (
+      await db.query(
+        "select has_function_privilege('authenticated','private.queue_rsvp_cancellation_email()','execute') permitted",
+      )
+    ).rows[0].permitted,
+    false,
+  );
+
+  const event = await makeEvent();
+  await call("alice", "request_meetup", event.id);
+  await denied(() =>
+    as(
+      "bea",
+      (c) =>
+        c.query(
+          "update public.meetup_requests set status='cancelled' where meetup_id=$1 and user_id=$2",
+          [event.id, ids.alice],
+        ),
+      database,
+    ),
+  );
+  await call("bea", "withdraw_meetup_request", event.id);
+  assert.equal(
+    (await withdrawals(event.id)).length,
+    0,
+    "Another member cannot cancel Alice's seat",
+  );
+  await Promise.all([
+    call("alice", "withdraw_meetup_request", event.id),
+    call("alice", "withdraw_meetup_request", event.id),
+  ]);
+  let notices = await withdrawals(event.id);
+  assert.equal(
+    notices.length,
+    1,
+    "Concurrent repeated withdrawals queue exactly one notice",
+  );
+  assert.equal(notices[0].user_id, ids.alice);
+  assert.equal(notices[0].related_user_id, null);
+  assert.equal(
+    notices[0].state,
+    "queued",
+    "Member notices are independent of organiser_enabled",
+  );
+  assert.equal(
+    (
+      await db.query("select approved_count from public.meetups where id=$1", [
+        event.id,
+      ])
+    ).rows[0].approved_count,
+    0,
+  );
+  assert.equal(
+    (await list(event.id)).filter(
+      (j) =>
+        ["confirmation", "reminder"].includes(j.kind) &&
+        j.state !== "cancelled",
+    ).length,
+    0,
+    "Pending attendee messages stop when the member withdraws",
+  );
+  await as(
+    "host",
+    (c) =>
+      c.query(
+        "update public.meetups set place='Updated public cafe' where id=$1",
+        [event.id],
+      ),
+    database,
+  );
+  const first = await claim();
+  assert.equal(first.kind, "rsvp_cancelled");
+  assert.equal(first.email, "alice@example.test");
+  assert.equal(
+    first.event.place,
+    "Updated public cafe",
+    "The notice uses current event details before its first send",
+  );
+  await call("alice", "request_meetup", event.id);
+  assert.equal(
+    await prepare(first),
+    null,
+    "Rejoining invalidates a claimed cancellation before provider submission",
+  );
+  await call("alice", "withdraw_meetup_request", event.id);
+  notices = await withdrawals(event.id);
+  assert.equal(notices.length, 2);
+  assert.notEqual(
+    notices[0].registration_id,
+    notices[1].registration_id,
+    "A new reservation has its own cancellation identity",
+  );
+  const second = await claim();
+  const frozen = await prepare(second);
+  await db.query("select public.finish_event_email($1,$2,null,'timeout',30)", [
+    second.id,
+    second.lease_token,
+  ]);
+  await as(
+    "host",
+    (c) =>
+      c.query(
+        "update public.meetups set place='Edited after send attempt' where id=$1",
+        [event.id],
+      ),
+    database,
+  );
+  await db.query(
+    "update private.event_emails set due_at=now()-interval '1 minute' where id=$1",
+    [second.id],
+  );
+  const retry = await claim();
+  assert.equal(retry.id, second.id);
+  assert.deepEqual(
+    retry.payload,
+    frozen,
+    "Retries freeze the complete provider payload after an ambiguous attempt",
+  );
+  await db.query("select public.finish_event_email($1,$2,$3)", [
+    retry.id,
+    retry.lease_token,
+    randomUUID(),
+  ]);
+  await call("alice", "withdraw_meetup_request", event.id);
+  assert.equal(
+    (await withdrawals(event.id)).length,
+    2,
+    "Repeated cancellation after delivery cannot resend",
+  );
+
+  const wholeEvent = await makeEvent();
+  await call("alice", "request_meetup", wholeEvent.id);
+  await as(
+    "host",
+    (c) =>
+      c.query("select public.set_meetup_status($1,'cancelled')", [
+        wholeEvent.id,
+      ]),
+    database,
+  );
+  assert.equal((await withdrawals(wholeEvent.id)).length, 0);
+  assert.equal(
+    (await list(wholeEvent.id)).filter(
+      (j) => j.kind === "cancellation" && j.user_id === ids.alice,
+    ).length,
+    1,
+    "Whole-event closure sends its original cancellation only",
+  );
+  await discardPending();
+  const moderated = await makeEvent();
+  await call("alice", "request_meetup", moderated.id);
+  await as(
+    "admin",
+    (c) =>
+      c.query(
+        "select public.moderate_meetup($1,'This event violates community rules.')",
+        [moderated.id],
+      ),
+    database,
+  );
+  assert.equal(
+    (await withdrawals(moderated.id)).length,
+    0,
+    "Admin removal is not a member withdrawal",
+  );
+  await discardPending();
+
+  const changedEmail = await makeEvent();
+  await call("alice", "request_meetup", changedEmail.id);
+  await call("alice", "withdraw_meetup_request", changedEmail.id);
+  const addressed = await claim();
+  await db.query(
+    "update auth.users set email='alice-new@example.test' where id=$1",
+    [ids.alice],
+  );
+  assert.equal(
+    await prepare(addressed),
+    null,
+    "A changed Auth email blocks submission to the previous address",
+  );
+  await db.query(
+    "update auth.users set email='alice@example.test' where id=$1",
+    [ids.alice],
+  );
+
+  for (const restriction of [
+    "suppressed",
+    "suspended",
+    "unconfirmed",
+    "event_cancelled",
+    "event_removed",
+    "paused",
+    "global_paused",
+  ] as const) {
+    const target = await makeEvent();
+    await call("alice", "request_meetup", target.id);
+    await call("alice", "withdraw_meetup_request", target.id);
+    if (restriction === "suppressed")
+      await db.query(
+        "insert into private.email_suppressions(email_hash,reason) values(encode(sha256(convert_to('alice@example.test','UTF8')),'hex'),'bounced')",
+      );
+    if (restriction === "suspended")
+      await db.query(
+        "update private.member_access set status='suspended' where user_id=$1",
+        [ids.alice],
+      );
+    if (restriction === "unconfirmed")
+      await db.query(
+        "update auth.users set email_confirmed_at=null where id=$1",
+        [ids.alice],
+      );
+    if (restriction === "event_cancelled")
+      await as(
+        "host",
+        (c) =>
+          c.query("select public.set_meetup_status($1,'cancelled')", [
+            target.id,
+          ]),
+        database,
+      );
+    if (restriction === "event_removed")
+      await as(
+        "admin",
+        (c) =>
+          c.query(
+            "select public.moderate_meetup($1,'This event violates community rules.')",
+            [target.id],
+          ),
+        database,
+      );
+    if (restriction === "paused")
+      await db.query(
+        "update private.email_config set rsvp_cancellation_enabled=false",
+      );
+    if (restriction === "global_paused")
+      await db.query("update private.email_config set enabled=false");
+    assert.equal(
+      await claim(),
+      null,
+      `${restriction} blocks a stale member cancellation notice`,
+    );
+    await db.query("delete from private.email_suppressions");
+    await db.query(
+      "update private.member_access set status='active' where user_id=$1",
+      [ids.alice],
+    );
+    await db.query(
+      "update auth.users set email_confirmed_at=now() where id=$1",
+      [ids.alice],
+    );
+    await db.query(
+      "update private.email_config set enabled=true,rsvp_cancellation_enabled=true",
+    );
+    await discardPending();
+  }
+  const trusted = await makeEvent();
+  await call("alice", "request_meetup", trusted.id);
+  await db.query(
+    "update public.meetup_requests set status='cancelled' where meetup_id=$1 and user_id=$2",
+    [trusted.id, ids.alice],
+  );
+  assert.equal(
+    (await withdrawals(trusted.id)).length,
+    0,
+    "A service action without the member's identity does not claim self-withdrawal",
+  );
+  const rollback = await makeEvent();
+  await call("alice", "request_meetup", rollback.id);
+  await db.query("begin");
+  await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+    ids.alice,
+  ]);
+  await db.query("set local role authenticated");
+  await db.query("select public.withdraw_meetup_request($1)", [rollback.id]);
+  await db.query("rollback");
+  assert.equal(
+    (await withdrawals(rollback.id)).length,
+    0,
+    "A rolled-back withdrawal never queues an email",
+  );
+  assert.equal(
+    (
+      await db.query("select approved_count from public.meetups where id=$1", [
+        rollback.id,
+      ])
+    ).rows[0].approved_count,
+    1,
+  );
+  await discardPending();
+  const deleted = await makeEvent();
+  await call("bea", "request_meetup", deleted.id);
+  await call("bea", "withdraw_meetup_request", deleted.id);
+  assert.equal((await withdrawals(deleted.id)).length, 1);
+  await db.query("delete from auth.users where id=$1", [ids.bea]);
+  assert.equal(
+    (await withdrawals(deleted.id)).length,
+    0,
+    "Account deletion removes private cancellation records",
+  );
+  await close(db);
+});
+
 test("all migrations also apply to an empty project with immediate member publication", async () => {
   await cluster.createDatabase("current_fresh");
   const client = await connection("current_fresh");
