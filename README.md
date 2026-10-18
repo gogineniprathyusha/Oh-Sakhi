@@ -2,6 +2,8 @@
 
 Richmond’s women’s friendship and experiences community. The application uses **Vite, React and TypeScript**, the approved preview’s original CSS, and **Supabase Auth + PostgreSQL**. Signed-out visitors browse published events; members use real accounts and database-backed RSVPs.
 
+For a new coding session, start with [AGENTS.md](AGENTS.md) and the [project context](docs/project-context.md). The context records the current product rules, deployed website/email status and verification limits; older stage snapshots below may describe superseded setup states.
+
 ## Run on your Mac
 
 Use Node.js **24 or later** and npm. From Terminal:
