@@ -26,6 +26,7 @@ export interface CommunityEvent {
   colors: [string, string];
   is_host: boolean;
   host_id?: string;
+  host_avatar_path?: string | null;
   status?: EventStatus;
   starts_at?: string;
   registration_deadline?: string;
@@ -40,6 +41,7 @@ export interface CommunityEvent {
 export interface Registration {
   user_id: string;
   display_name?: string;
+  avatar_path?: string | null;
   status: RequestStatus;
   created_at?: string;
 }
@@ -56,6 +58,7 @@ export type EventInput = Pick<
 export interface MeetupRow {
   id: string;
   host_id: string;
+  host_avatar_path?: string | null;
   title: string;
   category: string;
   event_date: string;

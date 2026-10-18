@@ -9,6 +9,7 @@ import {
 } from "./utils.ts";
 import { EventArtwork } from "./EventArtwork.tsx";
 import { deadlineLabel } from "./time.ts";
+import { MemberAvatar } from "../../components/MemberAvatar.tsx";
 interface Props {
   event: CommunityEvent;
   signedIn: boolean;
@@ -68,7 +69,12 @@ export function EventDetails({
         </p>
       )}
       <p className="detail-description">{current.description}</p>
-      <div className="detail-note">
+      <div className="detail-note event-host">
+        <MemberAvatar
+          name={current.host}
+          userId={current.host_id}
+          path={current.host_avatar_path}
+        />
         <strong>Hosted by {isOrganizer ? "You" : current.host}</strong>
       </div>
       {current.details_updated_at && !isOrganizer && (

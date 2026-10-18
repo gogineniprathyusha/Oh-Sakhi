@@ -2875,6 +2875,207 @@ test("flexible group sizes upgrade preserves seats and enforces positive capacit
   await close(client);
 });
 
+test("public photos expose only current active avatars while profile data and upload ownership remain protected", async () => {
+  const database = "public_photos";
+  await cluster.createDatabase(database);
+  const client = await connection(database);
+  await client.query(schemaFixture);
+  const files = (await readdir(migrationDir))
+    .filter((file) => file.endsWith(".sql") && file < "202610180001")
+    .sort();
+  await migrate(client, files);
+  for (const name of ["host", "alice", "admin"])
+    await client.query("insert into auth.users(id,email) values($1,$2)", [
+      ids[name],
+      `${name}@example.test`,
+    ]);
+  await client.query("insert into private.admin_roles(user_id) values($1)", [
+    ids.admin,
+  ]);
+  const current = `${ids.host}/current.png`;
+  const next = `${ids.host}/replacement.png`;
+  const unused = `${ids.host}/unused.png`;
+  for (const path of [current, next, unused])
+    await client.query(
+      "insert into storage.objects(bucket_id,name,owner_id) values('profile-photos',$1,$2)",
+      [path, ids.host],
+    );
+  await as(
+    "host",
+    (db) =>
+      db.query("update public.profiles set avatar_path=$1 where id=$2", [
+        current,
+        ids.host,
+      ]),
+    database,
+  );
+  const event = (
+    await as(
+      "host",
+      (db) =>
+        db.query(
+          `insert into public.meetups(host_id,title,category,event_date,event_time,place,capacity,description)
+    values($1,'Photo host event','Coffee','2099-10-17','10:30','Public venue',4,'A friendly public gathering for local members.') returning id`,
+          [ids.host],
+        ),
+      database,
+    )
+  ).rows[0];
+  const visible = (actor: string, path: string) =>
+    as(
+      actor,
+      (db) =>
+        db.query(
+          "select name from storage.objects where bucket_id='profile-photos' and name=$1",
+          [path],
+        ),
+      database,
+    );
+  const photos = (actor: string, userIds: string[]) =>
+    as(
+      actor,
+      (db) =>
+        db.query("select * from public.get_public_avatars($1::uuid[])", [
+          userIds,
+        ]),
+      database,
+    );
+  const profileBefore = (
+    await client.query("select * from public.profiles order by id")
+  ).rows;
+  assert.equal((await visible("guest", current)).rowCount, 0);
+  await migrate(client, ["202610180001_public_profile_photos.sql"]);
+  assert.deepEqual(
+    (await client.query("select * from public.profiles order by id")).rows,
+    profileBefore,
+  );
+  assert.equal((await visible("guest", current)).rowCount, 1);
+  assert.equal((await visible("alice", current)).rowCount, 1);
+  assert.equal((await visible("guest", unused)).rowCount, 0);
+  assert.equal((await visible("alice", unused)).rowCount, 0);
+  assert.equal((await visible("host", unused)).rowCount, 1);
+  assert.equal((await visible("admin", unused)).rowCount, 1);
+  assert.equal(
+    (
+      await client.query(
+        "select public from storage.buckets where id='profile-photos'",
+      )
+    ).rows[0].public,
+    false,
+  );
+  assert.deepEqual(
+    (await photos("guest", [ids.host, ids.alice, ids.host])).rows,
+    [{ user_id: ids.host, avatar_path: current }],
+  );
+  await denied(() => photos("guest", Array(101).fill(ids.host)), /up to 100/);
+  await denied(() =>
+    as("guest", (db) => db.query("select * from public.profiles"), database),
+  );
+  assert.equal(
+    (
+      await as(
+        "alice",
+        (db) =>
+          db.query("select * from public.profiles where id=$1", [ids.host]),
+        database,
+      )
+    ).rowCount,
+    0,
+  );
+  await denied(() =>
+    as(
+      "guest",
+      (db) =>
+        db.query("select * from public.get_meetup_attendees($1)", [event.id]),
+      database,
+    ),
+  );
+  assert.equal(
+    (
+      await as(
+        "guest",
+        (db) =>
+          db.query(
+            "select host_avatar_path from public.meetup_directory where id=$1",
+            [event.id],
+          ),
+        database,
+      )
+    ).rows[0].host_avatar_path,
+    current,
+  );
+  assert.equal(
+    (
+      await as(
+        "alice",
+        (db) =>
+          db.query(
+            "delete from storage.objects where bucket_id='profile-photos' and name=$1",
+            [current],
+          ),
+        database,
+      )
+    ).rowCount,
+    0,
+  );
+  await denied(() =>
+    as(
+      "alice",
+      (db) =>
+        db.query(
+          "insert into storage.objects(bucket_id,name,owner_id) values('profile-photos',$1,$2)",
+          [`${ids.host}/spoof.png`, ids.alice],
+        ),
+      database,
+    ),
+  );
+  await as(
+    "host",
+    (db) =>
+      db.query("update public.profiles set avatar_path=$1 where id=$2", [
+        next,
+        ids.host,
+      ]),
+    database,
+  );
+  assert.equal((await visible("guest", current)).rowCount, 0);
+  assert.equal((await visible("guest", next)).rowCount, 1);
+  assert.equal((await photos("guest", [ids.host])).rows[0].avatar_path, next);
+  await as(
+    "host",
+    (db) =>
+      db.query("update public.profiles set avatar_path=null where id=$1", [
+        ids.host,
+      ]),
+    database,
+  );
+  assert.equal((await visible("guest", next)).rowCount, 0);
+  assert.equal((await photos("guest", [ids.host])).rowCount, 0);
+  await as(
+    "host",
+    (db) =>
+      db.query("update public.profiles set avatar_path=$1 where id=$2", [
+        current,
+        ids.host,
+      ]),
+    database,
+  );
+  await as(
+    "admin",
+    (db) =>
+      db.query(
+        "select public.set_member_access($1,'suspended','Photo visibility test')",
+        [ids.host],
+      ),
+    database,
+  );
+  assert.equal((await visible("guest", current)).rowCount, 0);
+  assert.equal((await photos("guest", [ids.host])).rowCount, 0);
+  await client.query("delete from auth.users where id=$1", [ids.host]);
+  assert.equal((await visible("guest", current)).rowCount, 0);
+  await close(client);
+});
+
 test("all migrations also apply to an empty project with immediate member publication", async () => {
   await cluster.createDatabase("current_fresh");
   const client = await connection("current_fresh");

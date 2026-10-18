@@ -81,7 +81,11 @@ export function Information({ page }: { page: InformationPage }) {
               We use this information to provide accounts, display events,
               reserve seats, manage attendance, respond to support requests and
               moderate the community. Published event details and covers can be
-              public. Your profile is private by default; authorised
+              public. Profile photos are publicly visible by default, including
+              photos uploaded before this update. Removing or replacing a photo
+              changes which image the website displays; previously downloaded
+              copies may remain. Other profile details, including your email,
+              bio, interests and neighborhood, are not public; authorised
               administrators can access profile information. Organisers and
               administrators can view attendee display names, member
               identifiers, RSVP states and registration times, and download

@@ -52,7 +52,15 @@ export function useLiveCommunity(userId: string | undefined) {
       if (currentUser.current !== userId) return;
       setData((previous) =>
         previous
-          ? { ...previous, profile: { ...previous.profile, avatar_path: path } }
+          ? {
+              ...previous,
+              profile: { ...previous.profile, avatar_path: path },
+              events: previous.events.map((event) =>
+                event.host_id === userId
+                  ? { ...event, host_avatar_path: path }
+                  : event,
+              ),
+            }
           : previous,
       );
     },

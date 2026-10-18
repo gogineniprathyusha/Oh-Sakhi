@@ -109,8 +109,9 @@ function ProfileFields({
           </div>
         </div>
         <p className="small muted">
-          Share your general area. Your profile details are private by default;
-          you do not need to provide a street address.
+          Share your general area; you do not need to provide a street address.
+          Your profile photo is public. Your bio, interests and location details
+          are private.
         </p>
         {error && <p role="alert">{error}</p>}
         <button className="btn" type="submit">

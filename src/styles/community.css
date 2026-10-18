@@ -131,6 +131,32 @@
   height: 100%;
   object-fit: cover;
 }
+.event-host,
+.request-member {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.event-card .event-host {
+  margin-bottom: 18px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.event-host .avatar {
+  width: 30px;
+  height: 30px;
+  font-size: 12px;
+}
+.event-host > span:last-child,
+.event-host > strong,
+.request-member > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.request-member {
+  min-width: 0;
+}
 .profile-fields {
   border: 0;
   padding: 0;

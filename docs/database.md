@@ -20,14 +20,15 @@ Apply files in filename order, once each. Do not edit migrations that have alrea
 | `202610170008_admin_dashboard.sql`                 | Bounded administrator reads, recorded report/access decisions, audit access and authorised attendee exports       |
 | `202610170009_account_deletion.sql`                | Own-account summary, server-only deletion preparation/file listing and protected pending access                   |
 | `202610170010_flexible_group_size.sql`              | Positive whole-number group sizes without the original 30-seat limit; existing capacity enforcement is retained     |
+| `202610180001_public_profile_photos.sql`            | Public current photos, host photo paths and bounded avatar lookup; private profile fields remain protected          |
 
-The historical foundation required administrator publication. **The organiser-workflow migration replaces that policy.** Apply all twelve files for the current application and deploy `event-image` for covers and `delete-account` for account deletion. The frontend reads `meetup_directory` and uses registration RPCs; it does not write registration rows directly. Existing manual SQL Editor installations should apply only outstanding files. Apply `202610170010_flexible_group_size.sql` before entering group sizes above 30 or below 2. Group sizes must be positive integers within PostgreSQL's integer range (1–2,147,483,647), and cannot be reduced below the confirmed attendee count.
+The historical foundation required administrator publication. **The organiser-workflow migration replaces that policy.** Apply all thirteen files for the current application and deploy `event-image` for covers and `delete-account` for account deletion. The frontend reads `meetup_directory` and uses registration RPCs; it does not write registration rows directly. Existing manual SQL Editor installations should apply only outstanding files. Apply `202610170010_flexible_group_size.sql` before entering group sizes above 30 or below 2. Group sizes must be positive integers within PostgreSQL's integer range (1–2,147,483,647), and cannot be reduced below the confirmed attendee count.
 
 The first foundation migration classifies legacy events as drafts because they previously had no publication status. Their registrations are preserved. The organiser-workflow migration keeps those drafts private to avoid unexpectedly publishing unfinished content. Their organiser can publish them directly, with no admin review. Newly created events default to `published`.
 
 ## Data and visibility
 
-- `profiles`: own profile by default, plus admin access for moderation. Safe writable columns only; signup metadata cannot assign admin roles or access status.
+- `profiles`: private own-profile data plus admin access for moderation; current photo paths are exposed through narrow public helpers. Safe writable columns only; signup metadata cannot assign admin roles or access status.
 - `interests` / `member_interests`: supported interest catalogue and private member associations. Existing custom interests are retained when migrating.
 - `meetups`: immutable owner/identity, status, Richmond timezone, canonical `starts_at`, optional `ends_at`, registration deadline, cover path, public `host_label`, approved counter and `details_updated_at`.
 - `meetup_directory`: security-invoker view applying event RLS. It exposes an explicit event host label rather than joining private member profiles. Includes the details-change timestamp.
@@ -50,7 +51,7 @@ Capacity is protected by transactions, locks on the event row, a maintained appr
 
 ## Browser API contract
 
-Use the current authenticated session. Arguments are named exactly as shown:
+Use the current authenticated session for member actions. Public photo lookup accepts anonymous visitors. Arguments are named exactly as shown:
 
 | API                       | Arguments                                      | Access                                                            |
 | ------------------------- | ---------------------------------------------- | ----------------------------------------------------------------- |
@@ -59,6 +60,7 @@ Use the current authenticated session. Arguments are named exactly as shown:
 | `set_meetup_status`       | `p_meetup_id`, `p_status`                      | Event organiser; draft/published/cancelled/completed transitions  |
 | `moderate_meetup`         | `p_meetup_id`, `p_reason` (10–1000 characters) | Active administrator                                              |
 | `get_meetup_attendees`    | `p_meetup_id`                                  | Organiser/admin; minimal display name and request state           |
+| `get_public_avatars`    | `p_user_ids` (up to 100 UUIDs)                 | Public; current avatar paths of active members only              |
 | `get_my_access`           | None                                           | Current member’s status and trusted admin flag                    |
 | `set_member_interests`    | `p_interest_ids`                               | Current active member                                             |
 | `set_member_access`       | `p_user_id`, `p_status`, `p_reason`            | Administrator                                                     |
@@ -74,7 +76,7 @@ Stage D list RPCs return `{items,total}`, validate pagination (1–100 rows, non
 
 Access changes require a 10–500 character reason. Administrator targets must be managed through trusted SQL; the dashboard cannot promote users or suspend administrators. Suspension blocks member features and hides an organiser's events from public discovery without altering their existing registrations. Restoring access re-enables eligible published events. Report resolution/dismissal requires a 10–1000 character review note; event removal and report closure remain separate recorded decisions. Exports are limited to 30 per member per hour and contain member ID, display name, RSVP state and registration time. See [stage-d-admin.md](stage-d-admin.md).
 
-Own profile updates, event content updates/inserts, and report submissions use constrained table operations under RLS. `src/lib/community-api.ts` handles community data; `src/features/profile/profile-api.ts` handles the interest catalog and private profile photos. Event cover changes invoke the `event-image` function. Its `authorize_event_image(p_actor,p_event)` and `commit_event_image(p_actor,p_event,p_previous,p_path)` RPCs are executable only by `service_role`, after the endpoint verifies the caller. UI role flags control which buttons appear; PostgreSQL grants, RLS and RPC checks enforce access.
+Own profile updates, event content updates/inserts, and report submissions use constrained table operations under RLS. `src/lib/community-api.ts` handles community data; `src/features/profile/profile-api.ts` handles the interest catalog, owned photo uploads and public avatar lookup. Event cover changes invoke the `event-image` function. Its `authorize_event_image(p_actor,p_event)` and `commit_event_image(p_actor,p_event,p_previous,p_path)` RPCs are executable only by `service_role`, after the endpoint verifies the caller. UI role flags control which buttons appear; PostgreSQL grants, RLS and RPC checks enforce access.
 
 ## Image storage
 
@@ -83,7 +85,7 @@ Two private buckets:
 - `profile-photos`: 2 MiB; `${userId}/${uniqueName}.jpg|jpeg|png|webp`.
 - `event-covers`: 5 MiB; `${eventId}/${uniqueName}.jpg|jpeg|png|webp`.
 
-Supported MIME types are JPEG, PNG and WebP. Object paths are immutable: replacement uses a new unique path and then updates the owned profile/event reference. Overwrite/upsert is intentionally unavailable. Published organisers can replace covers without unpublishing. Closed/removed event covers cannot be changed. Public cover reads require a readable published event; profile photos remain private.
+Supported MIME types are JPEG, PNG and WebP. Object paths are immutable: replacement uses a new unique path and then updates the owned profile/event reference. Overwrite/upsert is intentionally unavailable. Published organisers can replace covers without unpublishing. Closed/removed event covers cannot be changed. Public cover reads require a readable published event; active members’ current profile photos are publicly readable through RLS; unused uploads stay restricted.
 
 Permissive policies plus restrictive bucket boundaries prevent unrelated legacy Storage policies from opening these two buckets. Other buckets remain unaffected. The profile editor supports private uploads, replacement and removal, using authenticated downloads and local blob URLs. Hosted checks verified profile upload/reload/removal, anonymous-read denial and bucket MIME/size rejection. See [member-profiles.md](member-profiles.md) for the profile boundary. Stage C cover changes require server decoding/re-encoding through `event-image`; direct browser cover insert/delete and reference writes are blocked. See [stage-c-events.md](stage-c-events.md) for deployment order, limits and cover verification. Signed URLs are not used by either editor.
 
@@ -98,3 +100,9 @@ For future changes, add a new timestamped migration, test both clean setup and u
 `npm run test:db` runs real PostgreSQL 17 in a disposable loopback cluster. Auth identity and Storage metadata tables are test fixtures; roles, RLS, triggers, constraints, grants and competing connections are real PostgreSQL behaviour. The suite verifies historical upgrades, over-capacity rollback, profile privacy, spoofed roles, rate limits, image policy boundaries and lock contention, then applies the organiser workflow and checks current permissions.
 
 `npm run test:e2e` verifies browser behaviour and Supabase request contracts with intercepted test responses. Hosted authentication results are recorded in [authentication-verification.md](authentication-verification.md), profile/Storage results in [member-profiles.md](member-profiles.md), and events/cover/attendance results in [stage-c-events.md](stage-c-events.md). Browser fixtures alone do not verify hosted services. No production database is used by these checks.
+
+## Public profile photos
+
+Apply `202610180001_public_profile_photos.sql` once after the preceding migrations, before deploying public photo UI. Existing and future current profile photos are public by default. `meetup_directory.host_avatar_path` provides host photos without granting public profile access. `get_public_avatars` resolves only current photo paths for up to 100 known member IDs; the browser batches attendee lookups. The attendee list itself remains organiser/admin-only.
+
+The bucket remains private, with anonymous RLS access to an active member’s currently referenced photo. Old, unused, removed, suspended-account and deleted-account photos are not publicly readable. Owned upload/delete grants and administrator access are preserved. Replacement/removal changes the website’s current photo and revokes normal Storage reads of the previous path. Copies, caches or previously issued access links may remain usable. Emails, bios, interests and location details stay protected. No new environment variable or Edge Function is required.

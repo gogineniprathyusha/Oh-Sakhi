@@ -2,6 +2,7 @@ import type { CommunityEvent } from "../features/events/types.ts";
 import { status, seats } from "../features/events/utils.ts";
 import { dateLabel, timeLabel } from "../features/events/utils.ts";
 import { EventArtwork } from "../features/events/EventArtwork.tsx";
+import { MemberAvatar } from "./MemberAvatar.tsx";
 export function EventCard({
   event,
   open,
@@ -35,7 +36,14 @@ export function EventCard({
         <h3>{event.title}</h3>
         <p className="event-venue">📍 {event.place}</p>
         <p className="event-description">{event.description}</p>
-        <p>Hosted by {event.is_host ? "You" : event.host}</p>
+        <div className="event-host">
+          <MemberAvatar
+            name={event.host}
+            userId={event.host_id}
+            path={event.host_avatar_path}
+          />
+          <span>Hosted by {event.is_host ? "You" : event.host}</span>
+        </div>
         {event.details_updated_at && !event.is_host && (
           <span className="small muted">
             Details updated — please review your plan.

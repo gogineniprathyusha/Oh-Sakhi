@@ -67,6 +67,7 @@ export async function authMock(
         city: "Richmond",
       });
     if (url.pathname === "/rest/v1/interests") return json([]);
+    if (url.pathname === "/rest/v1/rpc/get_public_avatars") return json([]);
     if (url.pathname === "/rest/v1/rpc/get_my_access")
       return json({ status: "active", is_admin: false });
     if (
