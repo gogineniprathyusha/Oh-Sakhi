@@ -17,6 +17,7 @@ async function fields(page: Page) {
     .fill("Summer chai gathering");
   await page.getByLabel("Date", { exact: true }).fill("2030-07-17");
   await page.getByLabel("Time (Richmond)", { exact: true }).fill("10:30");
+  await page.getByLabel("Group size", { exact: true }).fill("8");
   await page.getByLabel("Area / meeting place").fill("Richmond public cafe");
   await page
     .getByLabel("Tell us about your plan")
@@ -27,7 +28,14 @@ test("organisers save drafts with deadlines and end times, then publish directly
 }) => {
   const state = await eventMock(page);
   await page.locator("#header-create").click();
+  await expect(page.getByLabel("Group size", { exact: true })).toBeEmpty();
+  await expect(
+    page.getByLabel("Public organiser name", { exact: true }),
+  ).toBeEmpty();
   await fields(page);
+  await expect(
+    page.getByText("All times are in Eastern Daylight Time.", { exact: true }),
+  ).toBeVisible();
   await page
     .getByLabel("Registration deadline (optional)", { exact: true })
     .fill("2030-07-16T17:00");
@@ -54,6 +62,35 @@ test("organisers save drafts with deadlines and end times, then publish directly
     .click();
   await expect(page.locator("#toast")).toHaveText("Your event is published");
   expect(state.event.status).toBe("published");
+});
+test("hosts choose custom group sizes while confirmed seats and whole-number validation are retained", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const store = eventState();
+  store.event.approved_count = 2;
+  await eventMock(page, store);
+  await edit(page);
+  const size = page.getByLabel("Group size", { exact: true });
+  await size.fill("75");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.locator("#toast")).toContainText("Plan updated");
+  expect(store.event.capacity).toBe(75);
+  await edit(page);
+  await size.fill("1");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  expect(store.calls).toHaveLength(1);
+  await size.fill("3.5");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  expect(store.calls).toHaveLength(1);
+  await page.getByLabel("Date", { exact: true }).fill("2030-12-17");
+  await expect(
+    page.getByText("All times are in Eastern Standard Time.", { exact: true }),
+  ).toBeVisible();
+  await size.fill("3");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(store.event.capacity).toBe(3);
 });
 test("invalid deadlines and end times preserve form input without writing", async ({
   page,

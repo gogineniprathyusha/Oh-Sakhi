@@ -265,7 +265,11 @@ test("real organiser screens publish, view confirmed attendees and edit without 
     .getByLabel("Plan name", { exact: true })
     .fill("Real organiser coffee");
   await page.getByLabel("Date", { exact: true }).fill("2099-10-17");
-  await page.getByLabel("Time (Richmond)").fill("10:30");
+  await page.getByLabel("Time (Richmond)", { exact: true }).fill("10:30");
+  await page.getByLabel("Group size", { exact: true }).fill("8");
+  await page
+    .getByLabel("Public organiser name", { exact: true })
+    .fill("Test organiser");
   await page.getByLabel("Area / meeting place").fill("Richmond public cafe");
   await page
     .getByLabel("Tell us about your plan")
@@ -294,6 +298,9 @@ test("real organiser screens publish, view confirmed attendees and edit without 
     .getByRole("button", { name: "View details for Real organiser coffee" })
     .click();
   await expect(page.getByRole("dialog")).toContainText("Another public cafe");
+  await expect(page.getByRole("dialog")).not.toContainText(
+    "Details updated by the organiser",
+  );
   await expect(page.getByRole("dialog")).toContainText("7 of 8 spots left");
   const create = calls.find(
     (call) => call.path === "/rest/v1/meetups" && call.method === "POST",

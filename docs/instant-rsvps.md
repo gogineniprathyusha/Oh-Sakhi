@@ -11,7 +11,7 @@ This change supersedes organiser approval of attendance. Events still publish im
 - Repeated submissions return the same confirmed RSVP and consume no additional seats. Members cannot RSVP to their own hosted event.
 - **Cancel my spot** releases the seat immediately. The member can RSVP again while eligible. An old declined request does not require an organiser decision to rejoin under the new rules.
 - Organisers use **View attendees** for a read-only list of confirmed/non-attending members. There are no approval, decline, reconsideration or revocation controls. They still cancel the event directly from details.
-- My plans shows confirmed attendance, hosting and cancelled history. Demo RSVP behavior matches the real workflow, while remaining browser-only.
+- My plans shows events the member has joined and their RSVP history. My hosted events contains only events they created, including drafts and cancelled events.
 
 No waitlist, notifications or automatic emails are added.
 

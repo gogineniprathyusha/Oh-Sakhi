@@ -14,7 +14,7 @@ export function HostDesk({
   return (
     <div className="content">
       <span className="eyebrow">YOUR HOSTING SPACE</span>
-      <h1 className="page-title">Host dashboard</h1>
+      <h1 className="page-title">My hosted events</h1>
       <p className="section-intro">
         Publish and edit your own events, see confirmed attendees.
       </p>
@@ -37,7 +37,7 @@ export function HostDesk({
           emoji="☕"
         />
       )}
-      <div className="box">
+      <div className="box box-centered">
         <h3>Before you host</h3>
         <p className="section-intro">
           Meet in public venues and keep attendees informed of changes. RSVPs

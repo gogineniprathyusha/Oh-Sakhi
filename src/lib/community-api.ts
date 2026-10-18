@@ -19,6 +19,9 @@ function client() {
 function check(error: { message: string } | null) {
   if (error) throw Error(error.message);
 }
+// Display the new brand for the original database default without changing member labels.
+const hostLabel = (label: string) =>
+  label === "Her Hour host" ? "Her Hobby Hour host" : label;
 function mapEvent(
   row: MeetupRow,
   userId?: string,
@@ -35,7 +38,7 @@ function mapEvent(
     capacity: row.capacity,
     description: row.description,
     host_id: row.host_id,
-    host: row.host_name,
+    host: hostLabel(row.host_name),
     is_host: Boolean(userId && row.host_id === userId),
     emoji,
     colors,
@@ -47,7 +50,7 @@ function mapEvent(
     cover_path: row.cover_path,
     timezone: row.timezone ?? "America/New_York",
     ends_at: row.ends_at,
-    host_label: row.host_label,
+    host_label: hostLabel(row.host_label),
     request_status: registrations.find(
       (r) => r.meetup_id === row.id && r.user_id === userId,
     )?.status,

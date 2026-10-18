@@ -6,7 +6,6 @@ import {
   timeLabel,
   seats,
   status,
-  availability,
 } from "./utils.ts";
 import { EventArtwork } from "./EventArtwork.tsx";
 import { deadlineLabel } from "./time.ts";
@@ -49,33 +48,30 @@ export function EventDetails({
       <EventArtwork event={current} detail />
       <div className="detail-info">
         <span>
-          🗓 {dateLabel(current.date)} · {timeLabel(current.time)}
+          🗓 {dateLabel(current.date)} · {timeLabel(current)}
         </span>
         <span>📍 {current.place}</span>
         <span>
           👥 {seats(current)} of {current.capacity} spots left
         </span>
       </div>
-      <p className="small muted">
-        {availability(current)} · {current.timezone ?? "America/New_York"}{" "}
-        (Richmond)
-        {current.ends_at && (
-          <> · Ends {deadlineLabel(current.ends_at, current.timezone)}</>
-        )}
-        {current.registration_deadline && (
-          <>
-            <br />
-            RSVP by{" "}
-            {deadlineLabel(current.registration_deadline, current.timezone)}.
-            RSVPs are confirmed immediately while seats are available.
-          </>
-        )}
-      </p>
+      {current.ends_at && (
+        <p className="detail-schedule muted">
+          Ends {deadlineLabel(current.ends_at, current.timezone)}
+        </p>
+      )}
+      {current.registration_deadline && (
+        <p className="detail-schedule muted">
+          RSVP by{" "}
+          {deadlineLabel(current.registration_deadline, current.timezone)}.
+          RSVPs are confirmed immediately while seats are available.
+        </p>
+      )}
       <p className="detail-description">{current.description}</p>
       <div className="detail-note">
         <strong>Hosted by {isOrganizer ? "You" : current.host}</strong>
       </div>
-      {current.details_updated_at && (
+      {current.details_updated_at && !isOrganizer && (
         <p className="small muted">
           Details updated by the organiser. Please review the date, time and
           venue before attending.

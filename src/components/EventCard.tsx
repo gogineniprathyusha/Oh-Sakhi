@@ -1,10 +1,6 @@
 import type { CommunityEvent } from "../features/events/types.ts";
 import { status, seats } from "../features/events/utils.ts";
-import {
-  dateLabel,
-  timeLabel,
-  availability,
-} from "../features/events/utils.ts";
+import { dateLabel, timeLabel } from "../features/events/utils.ts";
 import { EventArtwork } from "../features/events/EventArtwork.tsx";
 export function EventCard({
   event,
@@ -34,18 +30,13 @@ export function EventCard({
       <EventArtwork event={event} />
       <div className="event-body">
         <div className="event-meta">
-          {dateLabel(event.date)} · {timeLabel(event.time)}
+          {dateLabel(event.date)} · {timeLabel(event)}
         </div>
         <h3>{event.title}</h3>
-        {event.starts_at && (
-          <p className="small muted">{availability(event)} · Richmond time</p>
-        )}
-        <p>
-          📍 {event.place}
-          <br />
-          Hosted by {event.is_host ? "You" : event.host}
-        </p>
-        {event.details_updated_at && (
+        <p className="event-venue">📍 {event.place}</p>
+        <p className="event-description">{event.description}</p>
+        <p>Hosted by {event.is_host ? "You" : event.host}</p>
+        {event.details_updated_at && !event.is_host && (
           <span className="small muted">
             Details updated — please review your plan.
           </span>

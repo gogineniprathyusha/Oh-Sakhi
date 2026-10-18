@@ -1,4 +1,4 @@
-# Her Hour — Oh Sakhi!
+# Her Hobby Hour — Oh Sakhi!
 
 Richmond’s women’s friendship and experiences community. The application uses **Vite, React and TypeScript**, the approved preview’s original CSS, and **Supabase Auth + PostgreSQL**. Signed-out visitors browse published events; members use real accounts and database-backed RSVPs.
 
@@ -56,6 +56,7 @@ The application has been connected and its authentication flows checked against 
    supabase/migrations/202610170007_rsvp_counter_fix.sql
    supabase/migrations/202610170008_admin_dashboard.sql
    supabase/migrations/202610170009_account_deletion.sql
+   supabase/migrations/202610170010_flexible_group_size.sql
    ```
 
    If some migrations are already applied, run only the outstanding ones. The organiser-workflow migration supersedes the earlier admin-publication rules. Previously saved drafts remain private and can be published directly by their organiser; existing registrations are retained. The Stage C image migration requires the `event-image` function for cover changes; follow [its deployment order](docs/stage-c-events.md).
@@ -92,7 +93,7 @@ Oh Sakhi/
 ├── src/
 │   ├── app/App.tsx                # Session, navigation and action coordination
 │   ├── components/               # Shared layout, cards, accessible modal and forms
-│   ├── pages/                    # Discover, My plans, Host desk, Circle, Profile, Auth, Admin
+│   ├── pages/                    # Discover, My plans, My hosted events, Circle, Profile, Auth, Admin
 │   ├── features/events/          # Event types, details, request manager and date rules
 │   ├── features/profile/         # Interest choices, image preparation and private photo API
 │   ├── features/admin/           # Protected API boundary, moderation forms and record lists

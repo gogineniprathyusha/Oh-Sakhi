@@ -14,21 +14,21 @@ export function MyPlans({
   const plans = events
     .filter(
       (event) =>
-        status(event) !== "none" || event.request_status === "cancelled",
+        !event.is_host &&
+        (status(event) !== "none" || event.request_status === "cancelled"),
     )
     .sort((a, b) => a.date.localeCompare(b.date));
   return (
     <div className="content">
-      <div className="eyebrow">YOUR HER HOUR — OH SAKHI! JOURNEY</div>
+      <div className="eyebrow">YOUR HER HOBBY HOUR — OH SAKHI! JOURNEY</div>
       <h1 className="page-title">My plans</h1>
       <p className="section-intro">
-        Your upcoming experiences and RSVP history in one place.
+        Events you’ve joined and your RSVP history in one place.
       </p>
       <div className="statrow">
         {[
           ["going", "Going"],
           ["cancelled", "Cancelled"],
-          ["hosting", "Hosting"],
         ].map(([value, label]) => (
           <div className="stat" key={value}>
             <strong>

@@ -105,8 +105,8 @@ export function DeleteAccount({
               ) : summary.upcoming_events > 0 ? (
                 <p className="detail-note">
                   Cancel your {summary.upcoming_events} upcoming published
-                  event(s) from Host desk before deleting your account. If your
-                  access is suspended, contact support for help.
+                  event(s) from My hosted events before deleting your account.
+                  If your access is suspended, contact support for help.
                 </p>
               ) : (
                 <>

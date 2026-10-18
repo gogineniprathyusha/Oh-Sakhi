@@ -2763,6 +2763,118 @@ test("Stage E account deletion stays self-scoped, retryable and inaccessible to 
   );
 });
 
+test("flexible group sizes upgrade preserves seats and enforces positive capacities without overbooking", async () => {
+  const database = "flexible_capacity";
+  await cluster.createDatabase(database);
+  const client = await connection(database);
+  await client.query(schemaFixture);
+  const files = (await readdir(migrationDir))
+    .filter((file) => file.endsWith(".sql") && file < "202610170010")
+    .sort();
+  await migrate(client, files);
+  for (const name of ["host", "alice", "bea"])
+    await client.query("insert into auth.users(id,email) values($1,$2)", [
+      ids[name],
+      `${name}@example.test`,
+    ]);
+  const create = async (capacity: number) =>
+    (
+      await as(
+        "host",
+        (db) =>
+          db.query(
+            `insert into public.meetups(host_id,title,category,event_date,event_time,place,capacity,description)
+    values($1,'Flexible capacity','Social','2099-10-17','10:30','Public venue',$2,'A friendly gathering in a public venue.') returning *`,
+            [ids.host, capacity],
+          ),
+        database,
+      )
+    ).rows[0];
+  const reserve = (member: string, id: string) =>
+    as(
+      member,
+      (db) => db.query("select public.request_meetup($1)", [id]),
+      database,
+    );
+  const legacy = await create(2);
+  await reserve("alice", legacy.id);
+  await reserve("bea", legacy.id);
+  const before = await client.query(
+    "select * from public.meetups where id=$1",
+    [legacy.id],
+  );
+  const requests = await client.query(
+    "select * from public.meetup_requests where meetup_id=$1 order by user_id",
+    [legacy.id],
+  );
+  await migrate(client, ["202610170010_flexible_group_size.sql"]);
+  assert.deepEqual(
+    (
+      await client.query("select * from public.meetups where id=$1", [
+        legacy.id,
+      ])
+    ).rows,
+    before.rows,
+  );
+  assert.deepEqual(
+    (
+      await client.query(
+        "select * from public.meetup_requests where meetup_id=$1 order by user_id",
+        [legacy.id],
+      )
+    ).rows,
+    requests.rows,
+  );
+  for (const capacity of [3, 75, 2147483647])
+    assert.equal((await create(capacity)).capacity, capacity);
+  for (const capacity of [0, -1])
+    await denied(
+      () => create(capacity),
+      /meetups_capacity_check|meetup_capacity_count/,
+    );
+  await denied(() => create(1.5), /integer/);
+  await denied(
+    () =>
+      as(
+        "host",
+        (db) =>
+          db.query("update public.meetups set capacity=1 where id=$1", [
+            legacy.id,
+          ]),
+        database,
+      ),
+    /meetup_capacity_count/,
+  );
+  const single = await create(1);
+  const race = await Promise.allSettled([
+    reserve("alice", single.id),
+    reserve("bea", single.id),
+  ]);
+  assert.equal(
+    race.filter((result) => result.status === "fulfilled").length,
+    1,
+  );
+  assert.equal(race.filter((result) => result.status === "rejected").length, 1);
+  assert.match(
+    (
+      race.find(
+        (result) => result.status === "rejected",
+      ) as PromiseRejectedResult
+    ).reason.message,
+    /full/i,
+  );
+  assert.equal(
+    (
+      await client.query(
+        "select approved_count from public.meetups where id=$1",
+        [single.id],
+      )
+    ).rows[0].approved_count,
+    1,
+  );
+  await close(client);
+});
+
 test("all migrations also apply to an empty project with immediate member publication", async () => {
   await cluster.createDatabase("current_fresh");
   const client = await connection("current_fresh");

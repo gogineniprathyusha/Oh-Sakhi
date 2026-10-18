@@ -58,6 +58,10 @@ for (const width of [1440, 390, 320]) {
     await page.goto(origin);
     await expect(page.locator(".event-card")).toHaveCount(1);
     await expect(page.locator(".event-card")).toContainText("1 spots left");
+    await expect(page.locator(".event-meta")).toHaveText(
+      "Wed, Jul 17 · 10:30 AM EDT",
+    );
+    await expect(page.locator(".event-card")).not.toContainText("Richmond time");
     await expect(
       page.getByText("You are hosting", { exact: true }),
     ).toHaveCount(0);
@@ -65,6 +69,7 @@ for (const width of [1440, 390, 320]) {
       .getByRole("button", { name: "View details for Richmond coffee" })
       .click();
     await expect(page.getByRole("dialog")).toContainText("1 of 2 spots left");
+    await expect(page.locator(".detail-info")).toContainText("10:30 AM EDT");
     await expect(
       page.getByRole("button", {
         name: /Edit plan|Cancel event|View attendees|Report this event/,
