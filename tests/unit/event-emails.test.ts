@@ -110,6 +110,7 @@ test("branded templates escape member content, link to the event and use actual 
     "organiser_published",
     "organiser_rsvp",
     "organiser_cancelled",
+    "rsvp_cancelled",
   ] as const) {
     const payload = emailPayload(
       { ...job, kind, previous_event: { ...event, place: "Old venue" } },
@@ -130,6 +131,22 @@ test("branded templates escape member content, link to the event and use actual 
   assert.throws(() =>
     emailPayload(job, { ...settings, appUrl: "javascript:bad()" }),
   );
+});
+test("seat cancellation confirms only the member reservation and allows conditional rejoining", () => {
+  const payload = emailPayload({ ...job, kind: "rsvp_cancelled" }, settings);
+  assert.match(payload.subject, /^Your spot cancellation is confirmed:/);
+  assert.match(payload.text, /your seat has been released/);
+  assert.match(payload.text, /event itself has not been cancelled/);
+  assert.match(payload.text, /if registration is open and a seat is available/);
+  assert.match(payload.text, /reservation history in My plans/);
+  assert.match(
+    payload.text,
+    /View your event: https:\/\/example.test\/\?event=/,
+  );
+  assert.ok(!payload.text.includes("cancel your RSVP"));
+  assert.ok(!payload.text.includes("organiser account"));
+  assert.deepEqual(payload.to, [job.email]);
+  assert.ok(!("cc" in payload) && !("bcc" in payload));
 });
 test("organiser cancellation confirms closure without claiming attendee delivery", () => {
   const payload = emailPayload(

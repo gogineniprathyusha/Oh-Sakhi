@@ -2,6 +2,8 @@
 
 Richmond’s women’s friendship and experiences community. The application uses **Vite, React and TypeScript**, the approved preview’s original CSS, and **Supabase Auth + PostgreSQL**. Signed-out visitors browse published events; members use real accounts and database-backed RSVPs.
 
+For a new coding session, start with [AGENTS.md](AGENTS.md) and the [project context](docs/project-context.md). The context records the current product rules, deployed website/email status and verification limits; older stage snapshots below may describe superseded setup states.
+
 ## Run on your Mac
 
 Use Node.js **24 or later** and npm. From Terminal:
@@ -157,3 +159,5 @@ RSVP confirmations, date/time/venue changes, cancellations and 24-hour reminders
 Organiser emails use `202610180003_organiser_emails.sql`: publication confirmation and new-attendee notices share the same private queue/provider. Deploy the updated `event-emails` worker before running `supabase/setup/enable_organiser_emails.sql`; no new DNS or secrets are required. Existing attendee delivery is preserved.
 
 Own-event cancellation confirmations use the additive `202610180004_organiser_cancellation_emails.sql` migration. Deploy the expanded worker, apply the migration once, then run `supabase/setup/enable_organiser_cancellation_emails.sql`. Repeated cancellation calls do not resend, and old cancellations are not backfilled. See the activation guide for recipient and pause rules.
+
+Members cancelling their own spot receive **Your spot cancellation is confirmed**, independently of whole-event cancellation emails. This uses `202610180005_rsvp_cancellation_emails.sql` and the separate `supabase/setup/enable_rsvp_cancellation_emails.sql` activation script after worker deployment. Rejoining suppresses an unsent notice; repeated withdrawal does not resend it. See the activation guide for rollout and verification status.
