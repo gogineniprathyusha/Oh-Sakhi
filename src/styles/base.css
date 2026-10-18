@@ -1,16 +1,16 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500;1,600&display=swap");
 :root {
-  --plum: #44293b;
-  --wine: #6b4058;
-  --dust: #aa7891;
-  --peach: #e7b9a4;
-  --cream: #faf7f4;
-  --paper: #fffdfb;
-  --text: #3f343d;
-  --muted: #857782;
-  --line: #e8dfdf;
+  --plum: #7a1e32;
+  --wine: #87344b;
+  --dust: #995269;
+  --peach: #f8c6cd;
+  --cream: #fdf6f2;
+  --paper: #fffcfa;
+  --text: #50323b;
+  --muted: #785b64;
+  --line: #ebd3cd;
   --sage: #758b7b;
-  --shadow: 0 18px 45px rgba(64, 43, 57, 0.065);
+  --shadow: 0 14px 38px rgba(122, 30, 50, 0.065);
 }
 * {
   box-sizing: border-box;
@@ -754,60 +754,6 @@ a {
     min-width: 130px;
   }
 }
-.auth-layout {
-  min-height: 100vh;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-.auth-intro {
-  padding: 11vh 9%;
-  background: linear-gradient(140deg, #3e2739, #805569);
-  color: #fff;
-  position: relative;
-  overflow: hidden;
-}
-.auth-intro h1 {
-  font: 500 clamp(55px, 7vw, 110px) "Playfair Display";
-  margin: 28px 0 8px;
-}
-.auth-intro h1 i {
-  color: #f0c8c0;
-}
-.auth-intro p {
-  font-size: 17px;
-  line-height: 1.7;
-  max-width: 390px;
-}
-.auth-bloom {
-  position: absolute;
-  font-size: 500px;
-  bottom: -280px;
-  right: -80px;
-  color: white;
-  opacity: 0.11;
-}
-.auth-panel {
-  display: grid;
-  place-items: center;
-  padding: 25px;
-}
-.auth-card {
-  max-width: 420px;
-  width: 100%;
-}
-.auth-card h2 {
-  font: 500 36px "Playfair Display";
-  color: var(--plum);
-  margin: 15px 0;
-}
-.auth-card form {
-  margin: 25px 0;
-}
-.auth-links {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-}
 .config-card {
   max-width: 680px;
   background: white;
@@ -829,28 +775,6 @@ a {
   font: 500 30px "Playfair Display";
 }
 @media (max-width: 750px) {
-  .auth-layout {
-    grid-template-columns: 1fr;
-  }
-  .auth-intro {
-    padding: 35px 25px;
-    min-height: 230px;
-  }
-  .auth-intro h1 {
-    font-size: 55px;
-    margin: 12px 0;
-  }
-  .auth-intro p {
-    font-size: 13px;
-  }
-  .auth-bloom {
-    font-size: 230px;
-    bottom: -120px;
-    right: -30px;
-  }
-  .auth-panel {
-    padding: 35px 23px;
-  }
   .config-card {
     margin: 30px 15px;
     padding: 24px;

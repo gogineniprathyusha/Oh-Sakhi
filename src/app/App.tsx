@@ -61,6 +61,15 @@ const CoverEditor = lazy(() =>
 type Dialog =
   | { kind: "details" | "manage" | "edit" | "report" | "moderate"; id: string }
   | { kind: "create" | "setup" };
+
+// Only the screen name is stored, never form fields or authentication credentials.
+function authModeFromHistory(): AuthMode | null {
+  const mode = history.state?.ohSakhiAuth;
+  return mode === "login" || mode === "signup" || mode === "reset"
+    ? mode
+    : null;
+}
+
 export function App() {
   const [, tick] = useState(0);
   useEffect(() => {
@@ -70,7 +79,11 @@ export function App() {
   const [page, setPage] = useState<Page>("discover"),
     [filter, setFilter] = useState("All");
   const [auth, setAuth] = useState<AuthMode | null>(() =>
-      authCallback.recovery && supabase ? "update" : null,
+      supabase
+        ? authCallback.recovery
+          ? "update"
+          : authModeFromHistory()
+        : null,
     ),
     [dialog, setDialog] = useState<Dialog | null>(null);
   const [busy, setBusy] = useState(false),
@@ -84,6 +97,14 @@ export function App() {
   const session = useSession(onRecovery),
     user = session.user,
     live = useLiveCommunity(user?.id);
+  useEffect(() => {
+    const restoreAuthScreen = () => {
+      session.clearError();
+      setAuth(supabase ? authModeFromHistory() : null);
+    };
+    window.addEventListener("popstate", restoreAuthScreen);
+    return () => window.removeEventListener("popstate", restoreAuthScreen);
+  }, [session.clearError]);
   const publicEvents = usePublicEvents(
     !user && !session.loading && !auth && !session.error,
   );
@@ -160,6 +181,11 @@ export function App() {
   function login() {
     if (supabase) {
       close();
+      history.pushState(
+        { ...history.state, ohSakhiAuth: "login" },
+        "",
+        withoutAuthCallback(new URL(location.href)),
+      );
       setAuth("login");
     } else open({ kind: "setup" });
   }
@@ -389,7 +415,10 @@ export function App() {
           setMode={(next) => {
             session.clearError();
             history.replaceState(
-              null,
+              {
+                ...history.state,
+                ...(authModeFromHistory() ? { ohSakhiAuth: next } : {}),
+              },
               "",
               withoutAuthCallback(new URL(location.href)),
             );
@@ -398,10 +427,12 @@ export function App() {
           back={() => {
             session.clearError();
             history.replaceState(
-              null,
+              history.state,
               "",
               withoutAuthCallback(new URL(location.href)),
             );
+            // Direct recovery links have no in-app auth entry to return from.
+            if (authModeFromHistory()) history.back();
             setAuth(null);
             setPage("discover");
           }}

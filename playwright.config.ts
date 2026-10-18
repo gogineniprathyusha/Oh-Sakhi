@@ -15,6 +15,7 @@ export default defineConfig({
     {
       name: "mobile-webkit",
       testMatch: [
+        "**/auth-navigation.spec.ts",
         "**/branding.spec.ts",
         "**/public-photos.spec.ts",
         "**/email-links.spec.ts",
