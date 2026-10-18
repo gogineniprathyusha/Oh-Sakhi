@@ -153,3 +153,7 @@ For later Vercel hosting, use the Vite preset, `npm run build`, and output direc
 ## Stage F — event emails
 
 RSVP confirmations, date/time/venue changes, cancellations and 24-hour reminders use a private transactional queue, protected Supabase worker and signed Resend delivery webhooks. Apply `202610180002_event_emails.sql` once; delivery starts disabled. See [the activation guide](docs/stage-f-email-notifications.md) for the Resend webhook, the two Edge Function deployments and the separate hosted cron/Vault configuration and delivery activation scripts. No frontend secret or GoDaddy change is needed. Git/Vercel deployment does not apply SQL or enable email delivery.
+
+Organiser emails use `202610180003_organiser_emails.sql`: publication confirmation and new-attendee notices share the same private queue/provider. Deploy the updated `event-emails` worker before running `supabase/setup/enable_organiser_emails.sql`; no new DNS or secrets are required. Existing attendee delivery is preserved.
+
+Own-event cancellation confirmations use the additive `202610180004_organiser_cancellation_emails.sql` migration. Deploy the expanded worker, apply the migration once, then run `supabase/setup/enable_organiser_cancellation_emails.sql`. Repeated cancellation calls do not resend, and old cancellations are not backfilled. See the activation guide for recipient and pause rules.
