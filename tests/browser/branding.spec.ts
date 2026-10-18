@@ -40,16 +40,26 @@ for (const width of [320, 390, 440]) {
         new URL(route.request().url()).pathname !== "/rest/v1/meetup_directory"
       )
         return false;
+      const event = eventState().event;
+      event.host_name = "Her Hour host";
+      event.host_label = "Her Hour host";
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify([eventState().event]),
+        body: JSON.stringify([event]),
       });
       return true;
     });
     await page.goto(origin);
     await expect(page.locator(".event-card")).toHaveCount(1);
     await page.evaluate(() => document.fonts.ready);
+    await expect(page).toHaveTitle(/Her Hobby Hour — Oh Sakhi!/);
+    await expect(page.locator(".topbar .mobile-brand")).toHaveText(
+      "her hobby hour",
+    );
+    await expect(page.locator(".event-card")).toContainText(
+      "Her Hobby Hour host",
+    );
     await expectBrandColors(page, page.locator(".topbar .mobile-brand"));
     await expectBrandColors(page, page.locator(".hero"));
     await expectBrandColors(page, page.locator(".event-art"));
@@ -75,6 +85,12 @@ for (const width of [320, 390, 440]) {
     await expect(
       page.getByRole("heading", { name: "Welcome back" }),
     ).toBeVisible();
+    await expect(page.locator(".auth-intro h1")).toHaveText("her hobby hour.");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
     await expectBrandColors(page, page.locator(".auth-intro"));
     await page.screenshot({
       path: testInfo.outputPath(`login-${width}.png`),
@@ -91,6 +107,12 @@ for (const width of [320, 390, 440]) {
     await expect(
       page.getByRole("heading", { name: "Privacy Policy", exact: true }),
     ).toBeVisible();
+    await expect(page).toHaveTitle(
+      "Privacy Policy | Her Hobby Hour — Oh Sakhi!",
+    );
+    await expect(page.locator(".information-header .brand")).toHaveText(
+      "her hobby hour",
+    );
     await expectBrandColors(page, page.locator(".information-header .brand"));
     expect(
       await page.evaluate(

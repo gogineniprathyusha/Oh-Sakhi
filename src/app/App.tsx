@@ -101,7 +101,7 @@ export function App() {
   }, []);
   useEffect(() => () => clearTimeout(timer.current), []);
   useEffect(() => {
-    document.title = `Her Hour — Oh Sakhi! | ${page === "discover" ? "Your time. Your circle." : page === "myplans" ? "My plans" : page === "host" ? "Host desk" : page === "circle" ? "My circle" : page === "admin" ? "Admin dashboard" : "My profile"}`;
+    document.title = `Her Hobby Hour — Oh Sakhi! | ${page === "discover" ? "Your time. Your circle." : page === "myplans" ? "My plans" : page === "host" ? "My hosted events" : page === "circle" ? "My circle" : page === "admin" ? "Admin dashboard" : "My profile"}`;
   }, [page]);
   const open = (next: Dialog) => {
     if (!dialog) opener.current = document.activeElement as HTMLElement | null;
@@ -188,7 +188,7 @@ export function App() {
       );
       await live.refresh();
       close();
-      setPage("myplans");
+      setPage("host");
       notify(
         current
           ? "Plan updated — existing RSVPs are preserved."
@@ -330,7 +330,7 @@ export function App() {
   if (session.loading)
     return (
       <div className="content" role="status">
-        <h1 className="page-title">Her Hour — Oh Sakhi!</h1>
+        <h1 className="page-title">Her Hobby Hour — Oh Sakhi!</h1>
         <p>Checking your session…</p>
       </div>
     );
@@ -406,7 +406,7 @@ export function App() {
         login={login}
         modalOpen={showDialog}
       >
-        {user && (
+        {user && ["discover", "myplans", "host"].includes(page) && (
           <div className="member-refresh">
             <button
               className="link-btn"

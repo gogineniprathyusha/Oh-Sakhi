@@ -1,14 +1,20 @@
 import type { CommunityEvent } from "./types.ts";
+import { EVENT_TIMEZONE, eventInstant } from "./time.ts";
 export const dateLabel = (date: string) =>
   new Date(`${date}T12:00:00`).toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
   });
-export const timeLabel = (time: string) =>
-  new Date(`2026-01-01T${time}`).toLocaleTimeString("en-US", {
+export const timeLabel = (event: CommunityEvent) =>
+  new Date(
+    event.starts_at ??
+      eventInstant(`${event.date}T${event.time}`, event.timezone),
+  ).toLocaleTimeString("en-US", {
+    timeZone: event.timezone ?? EVENT_TIMEZONE,
     hour: "numeric",
     minute: "2-digit",
+    timeZoneName: "short",
   });
 export const status = (event: CommunityEvent) =>
   event.is_host

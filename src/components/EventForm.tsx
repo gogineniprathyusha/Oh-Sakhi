@@ -5,6 +5,7 @@ import {
   deadlineLabel,
   EVENT_TIMEZONE,
   eventInstant,
+  eventTimezoneName,
   localDateTime,
 } from "../features/events/time.ts";
 export function EventForm({
@@ -17,6 +18,13 @@ export function EventForm({
   save: (input: EventInput) => void;
 }) {
   const [error, setError] = useState("");
+  const [date, setDate] = useState(event?.date ?? "");
+  const [time, setTime] = useState(event?.time ?? "");
+  const organiserName = ["Her Hour host", "Her Hobby Hour host"].includes(
+    event?.host_label ?? "",
+  )
+    ? ""
+    : (event?.host_label ?? "");
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
@@ -76,8 +84,16 @@ export function EventForm({
       setError("Please complete all plan details with today or a future date.");
       return;
     }
+    if (
+      !Number.isInteger(input.capacity) ||
+      input.capacity < 1 ||
+      input.capacity > 2147483647
+    ) {
+      setError("Choose a positive whole number for the group size.");
+      return;
+    }
     if (input.capacity < confirmed) {
-      setError(`Capacity must allow all ${confirmed} approved attendees.`);
+      setError(`Group size must allow all ${confirmed} confirmed attendees.`);
       return;
     }
     save(input);
@@ -115,29 +131,18 @@ export function EventForm({
           </div>
           <div className="field">
             <label htmlFor="ev-capacity">Group size</label>
-            <select
+            <input
               id="ev-capacity"
               name="capacity"
-              defaultValue={event?.capacity ?? 8}
-            >
-              {[
-                2,
-                4,
-                6,
-                8,
-                10,
-                12,
-                15,
-                20,
-                30,
-                ...(event ? [event.capacity] : []),
-              ]
-                .filter((value, index, array) => array.indexOf(value) === index)
-                .sort((a, b) => a - b)
-                .map((size) => (
-                  <option key={size}>{size}</option>
-                ))}
-            </select>
+              type="number"
+              inputMode="numeric"
+              min={Math.max(1, event?.approved_total ?? 0)}
+              max={2147483647}
+              step={1}
+              required
+              defaultValue={event?.capacity}
+              placeholder="Enter number of seats"
+            />
           </div>
         </div>
         <div className="form-grid">
@@ -149,7 +154,8 @@ export function EventForm({
               type="date"
               min={today()}
               required
-              defaultValue={event?.date}
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
             />
           </div>
           <div className="field">
@@ -158,15 +164,16 @@ export function EventForm({
               id="ev-time"
               name="time"
               type="time"
+              aria-describedby="ev-time-zone"
               required
-              defaultValue={event?.time}
+              value={time}
+              onChange={(event) => setTime(event.target.value)}
             />
+            <small id="ev-time-zone" className="small muted">
+              All times are in {eventTimezoneName(date, time, event?.timezone)}.
+            </small>
           </div>
         </div>
-        <p className="small muted">
-          All times are in {event?.timezone ?? "America/New_York"} (Richmond),
-          including daylight saving time.
-        </p>
         <div className="form-grid">
           <div className="field">
             <label htmlFor="ev-deadline">
@@ -207,7 +214,8 @@ export function EventForm({
             id="ev-host-label"
             name="host_label"
             maxLength={60}
-            defaultValue={event?.host_label ?? "Her Hour host"}
+            defaultValue={organiserName}
+            placeholder="Enter your name or group name"
             required
           />
           <small className="muted">

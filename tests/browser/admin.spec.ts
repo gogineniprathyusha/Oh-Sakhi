@@ -231,12 +231,16 @@ test("failed reads clear sensitive lists, recover on retry, and role revocation 
     "Administrator access is required",
   );
   await expect(page.locator(".admin-records")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Refresh plans", exact: true }),
+  ).toHaveCount(0);
+  await page.locator('.sidebar [data-page="discover"]').click();
   await page
     .getByRole("button", { name: "Refresh plans", exact: true })
     .click();
   await expect(page.locator('[data-page="admin"]')).toHaveCount(0);
   await expect(
-    page.getByRole("heading", { name: "Administrator access required" }),
+    page.getByRole("heading", { name: "Find your next plan" }),
   ).toBeVisible();
 });
 test("organisers can export their own attendees without acquiring admin navigation", async ({

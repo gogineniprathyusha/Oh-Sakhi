@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { informationPages, type InformationPage } from "../lib/information.ts";
 export function Information({ page }: { page: InformationPage }) {
   useEffect(() => {
-    document.title = `${informationPages[page]} | Her Hour — Oh Sakhi!`;
+    document.title = `${informationPages[page]} | Her Hobby Hour — Oh Sakhi!`;
   }, [page]);
   return (
     <div className="information-shell">
@@ -13,7 +13,10 @@ export function Information({ page }: { page: InformationPage }) {
       </a>
       <header className="information-header">
         <a className="brand" href="/">
-          <Bloom /> her <i>hour</i>
+          <Bloom />{" "}
+          <span className="brand-wordmark">
+            her hobby <i>hour</i>
+          </span>
         </a>
         <a className="link-btn" href="/">
           ← Back to community
@@ -24,7 +27,7 @@ export function Information({ page }: { page: InformationPage }) {
         className="content information-content"
         tabIndex={-1}
       >
-        <span className="eyebrow">HER HOUR — OH SAKHI! · RICHMOND</span>
+        <span className="eyebrow">HER HOBBY HOUR — OH SAKHI! · RICHMOND</span>
         <h1 className="page-title">{informationPages[page]}</h1>
         {page !== "contact" && (
           <p className="detail-note">
@@ -44,7 +47,7 @@ export function Information({ page }: { page: InformationPage }) {
               <a className="contact-email" href="mailto:whiteperall@gmail.com">
                 whiteperall@gmail.com
               </a>
-              <p>Her Hour — Oh Sakhi! · Richmond, Virginia</p>
+              <p>Her Hobby Hour — Oh Sakhi! · Richmond, Virginia</p>
             </div>
             <p>
               Please include the event title or relevant account email when
@@ -61,7 +64,7 @@ export function Information({ page }: { page: InformationPage }) {
           <>
             <h2>Who operates the community</h2>
             <p>
-              Her Hour — Oh Sakhi! is operated by Prathyusha Gogineni. For
+              Her Hobby Hour — Oh Sakhi! is operated by Prathyusha Gogineni. For
               privacy questions or requests, email{" "}
               <a href="mailto:whiteperall@gmail.com">whiteperall@gmail.com</a>.
             </p>
@@ -137,7 +140,7 @@ export function Information({ page }: { page: InformationPage }) {
           </>
         ) : page === "terms" ? (
           <>
-            <h2>Using Her Hour — Oh Sakhi!</h2>
+            <h2>Using Her Hobby Hour — Oh Sakhi!</h2>
             <p>
               These draft terms describe participation in the community operated
               by Prathyusha Gogineni. Use your own account, provide accurate
@@ -188,7 +191,7 @@ export function Information({ page }: { page: InformationPage }) {
           <>
             <h2>Be welcoming and respectful</h2>
             <p>
-              Her Hour — Oh Sakhi! is a women’s friendship and experiences
+              Her Hobby Hour — Oh Sakhi! is a women’s friendship and experiences
               community, welcoming different cultures and backgrounds. Respect
               people’s boundaries and choices. Harassment, discrimination,
               threats, spam and unwanted romantic or commercial approaches do

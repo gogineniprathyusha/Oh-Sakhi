@@ -33,7 +33,7 @@ export function Discover({
       (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time),
     );
   return (
-    <div className="content">
+    <div className="content discover-content">
       <section className="hero">
         <Bloom className="hero-bloom" />
         <div className="hero-copy">
@@ -94,10 +94,10 @@ export function Discover({
           icon={<Bloom />}
         />
       )}
-      <div className="box">
+      <div className="box box-centered">
         <h3>Come as you are. Leave with your people.</h3>
         <p className="section-intro">
-          Her Hour — Oh Sakhi! is Indian-inspired and open to women of all
+          Her Hobby Hour — Oh Sakhi! is Indian-inspired and open to women of all
           backgrounds. We’re about friendship, fresh experiences, and genuine,
           in-person connections—not dating.
         </p>

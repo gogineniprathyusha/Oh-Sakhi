@@ -37,6 +37,9 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+#view > .content {
+  padding-bottom: 40px;
+}
 .community-footer {
   padding: 12px 50px 32px;
   border-top: 1px solid var(--line);
@@ -102,6 +105,7 @@
   .information-header {
     padding: 20px 17px;
     align-items: flex-start;
+    flex-wrap: wrap;
   }
   .information-header .brand {
     font-size: 23px;

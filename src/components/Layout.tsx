@@ -18,7 +18,7 @@ interface Props {
 const items: [Page, string, string][] = [
   ["discover", "⌕", "Discover"],
   ["myplans", "♡", "My plans"],
-  ["host", "▦", "Host desk"],
+  ["host", "▦", "My hosted events"],
   ["circle", "✧", "My circle"],
   ["profile", "◯", "My profile"],
   ["admin", "⚑", "Admin"],
@@ -71,14 +71,15 @@ export function Layout({
           <a className="brand" href="#discover" onClick={home}>
             <Bloom className="brand-flower" />
             <span>
-              her <i>hour</i>
+              <span className="brand-wordmark">
+                her hobby <i>hour</i>
+              </span>
               <small>oh sakhi! · your time, your circle</small>
             </span>
           </a>
           <div className="menu-title">YOUR COMMUNITY</div>
           <nav aria-label="Community">{navigation()}</nav>
           <div className="side-bottom">
-            <div className="location">📍 Richmond, Virginia</div>
             <div className="side-note">
               Your time.
               <br />
@@ -91,17 +92,26 @@ export function Layout({
         <div className="main">
           <header className="topbar">
             <a className="mobile-brand" href="#discover" onClick={home}>
-              <Bloom /> her <i>hour</i>
+              <Bloom />{" "}
+              <span className="brand-wordmark">
+                her hobby <i>hour</i>
+              </span>
             </a>
-            <span className="top-location">📍 Richmond, VA</span>
             <div className="top-actions">
               {signedIn ? (
-                <Avatar
-                  name={name}
-                  url={photoUrl}
-                  id="top-avatar"
-                  label="My profile"
-                />
+                <button
+                  type="button"
+                  className="avatar-button"
+                  aria-label="My profile"
+                  onClick={() => navigate("profile")}
+                >
+                  <Avatar
+                    name={name}
+                    url={photoUrl}
+                    id="top-avatar"
+                    label="My profile"
+                  />
+                </button>
               ) : (
                 <button className="link-btn" onClick={login}>
                   Log in / Join
@@ -122,7 +132,7 @@ export function Layout({
           <footer className="community-footer">
             <LegalLinks />
             <p className="small muted">
-              Her Hour — Oh Sakhi! · Richmond, Virginia
+              Her Hobby Hour — Oh Sakhi! · Richmond, Virginia
             </p>
           </footer>
         </div>

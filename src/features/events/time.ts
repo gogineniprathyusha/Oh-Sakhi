@@ -56,3 +56,21 @@ export function deadlineLabel(iso: string, timeZone = EVENT_TIMEZONE) {
     timeZoneName: "short",
   });
 }
+export function eventTimezoneName(
+  date = "",
+  time = "",
+  timeZone = EVENT_TIMEZONE,
+) {
+  let instant = new Date();
+  let timeZoneName: "long" | "longGeneric" = "long";
+  try {
+    if (date)
+      instant = new Date(eventInstant(`${date}T${time || "12:00"}`, timeZone));
+  } catch {
+    // An incomplete or ambiguous form value has no reliable daylight-saving offset.
+    timeZoneName = "longGeneric";
+  }
+  return new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName })
+    .formatToParts(instant)
+    .find((part) => part.type === "timeZoneName")!.value;
+}

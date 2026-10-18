@@ -6,6 +6,29 @@
   letter-spacing: 2.1px;
   line-height: normal;
 }
+.brand-wordmark {
+  white-space: nowrap;
+}
+.sidebar .brand-wordmark {
+  display: block;
+  font-size: 22px;
+  letter-spacing: -1px;
+}
+@media (max-width: 750px) {
+  .topbar .mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mobile-brand .brand-wordmark {
+    font-size: 17px;
+    line-height: 1.05;
+  }
+  .mobile-brand .brand-wordmark i {
+    display: block;
+    font-size: 19px;
+  }
+}
 .profile-heading {
   border: 0;
   margin-bottom: 14px;
@@ -193,6 +216,9 @@
   display: flex;
   justify-content: flex-end;
   padding: 12px 30px 0;
+}
+.member-refresh + .discover-content {
+  padding-top: 16px;
 }
 input[type="datetime-local"] {
   min-width: 0;

@@ -126,12 +126,6 @@ a {
 .side-bottom {
   margin-top: auto;
 }
-.location {
-  color: #7a6a76;
-  font-size: 12px;
-  padding: 15px 5px;
-  border-bottom: 1px solid var(--line);
-}
 .side-note {
   font-family: "Playfair Display";
   font-size: 24px;
@@ -155,14 +149,18 @@ a {
   justify-content: space-between;
   padding: 0 50px;
 }
-.top-location {
-  color: var(--muted);
-  font-size: 12px;
-}
 .top-actions {
   display: flex;
   align-items: center;
   gap: 18px;
+  margin-left: auto;
+}
+.avatar-button {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
 }
 .avatar {
   display: flex;
@@ -374,7 +372,21 @@ a {
   color: var(--muted);
   line-height: 1.6;
   margin: 0 0 18px;
-  flex: 1;
+}
+.event-card .event-venue {
+  margin-bottom: 8px;
+}
+.event-card .event-description {
+  font-size: 14px;
+  margin-bottom: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.event-description,
+.detail-description {
+  text-align: justify;
+  text-align-last: left;
+  hyphens: auto;
 }
 .event-footer {
   display: flex;
@@ -383,6 +395,7 @@ a {
   padding-top: 14px;
   border-top: 1px solid var(--line);
   gap: 8px;
+  margin-top: auto;
 }
 .event-footer span {
   color: #8e7d87;
@@ -446,6 +459,18 @@ a {
   margin: 0 0 9px;
   color: var(--plum);
 }
+.box-centered {
+  text-align: center;
+}
+.box-centered h3 {
+  max-width: 690px;
+  margin: 0 auto;
+  text-wrap: balance;
+}
+.box-centered .section-intro {
+  margin: 12px auto 0;
+  text-wrap: pretty;
+}
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -472,6 +497,21 @@ a {
   outline: none;
   color: var(--text);
   min-width: 0;
+}
+.field select {
+  appearance: none;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m3 6 5 5 5-5' stroke='%2374636e' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 14px 14px;
+}
+@media (forced-colors: active) {
+  .field select {
+    appearance: auto;
+    padding-right: 13px;
+    background-image: none;
+  }
 }
 .field input:focus,
 .field select:focus,
@@ -540,11 +580,17 @@ a {
   gap: 13px;
   flex-wrap: wrap;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.6;
 }
+.detail-schedule {
+  font-size: 15px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
 .detail-description {
-  line-height: 1.8;
+  font-size: 16px;
+  line-height: 1.75;
   color: #6e606b;
   white-space: pre-wrap;
 }
@@ -636,9 +682,6 @@ a {
   .topbar {
     height: 70px;
     padding: 0 18px;
-  }
-  .top-location {
-    display: none;
   }
   .top-actions {
     gap: 9px;
@@ -814,7 +857,7 @@ a {
   }
 }
 
-/* Her Hour branding and five-tab mobile navigation */
+/* Her Hobby Hour branding and five-tab mobile navigation */
 .brand {
   font-size: 26px;
 }

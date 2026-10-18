@@ -219,7 +219,7 @@ test("administrator and upcoming-host preconditions prevent deletion submissions
     .getByRole("button", { name: "Delete my account", exact: true })
     .click();
   await expect(
-    page.getByText(/upcoming published event\(s\) from Host desk/),
+    page.getByText(/upcoming published event\(s\) from My hosted events/),
   ).toBeVisible();
   expect(state.calls).toHaveLength(0);
 });

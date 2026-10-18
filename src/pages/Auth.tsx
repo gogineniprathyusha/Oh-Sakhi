@@ -49,7 +49,7 @@ export function Auth({
         });
         if (result.error) throw result.error;
         back();
-        notify("Welcome to Her Hour!");
+        notify("Welcome to Her Hobby Hour!");
       }
       if (mode === "signup") {
         const name = String(form.get("name") ?? "").trim();
@@ -107,9 +107,9 @@ export function Auth({
   return (
     <div className="auth-layout">
       <div className="auth-intro">
-        <div className="eyebrow">HER HOUR · OH SAKHI! · RICHMOND</div>
+        <div className="eyebrow">HER HOBBY HOUR · OH SAKHI! · RICHMOND</div>
         <h1>
-          her <i>hour.</i>
+          her hobby <i>hour.</i>
         </h1>
         <p>
           Oh Sakhi! Your hour, your circle. Find experiences, make new friends,
