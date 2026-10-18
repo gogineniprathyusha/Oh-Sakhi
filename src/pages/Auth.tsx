@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase.ts";
 import { withoutAuthCallback } from "../lib/auth-callback.ts";
 import type { AuthMode } from "../features/events/types.ts";
 import { LegalLinks } from "../components/LegalLinks.tsx";
+import { Bloom } from "../components/Bloom.tsx";
 export function Auth({
   mode,
   setMode,
@@ -114,7 +115,7 @@ export function Auth({
           Oh Sakhi! Your hour, your circle. Find experiences, make new friends,
           and belong.
         </p>
-        <div className="auth-bloom">✳</div>
+        <Bloom className="auth-bloom" />
       </div>
       <main className="auth-panel">
         <div className="auth-card">

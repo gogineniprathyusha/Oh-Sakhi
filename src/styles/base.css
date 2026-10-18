@@ -71,6 +71,14 @@ a {
   font-family: "Playfair Display";
   font-weight: 500;
 }
+.bloom {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  vertical-align: -0.125em;
+  pointer-events: none;
+}
 .brand-flower {
   font-size: 29px;
   color: var(--dust);
@@ -220,13 +228,13 @@ a {
   align-items: center;
   box-shadow: var(--shadow);
 }
-.hero:before {
-  content: "✳";
+.hero-bloom {
   position: absolute;
   right: 7%;
   top: -104px;
   font-size: 430px;
-  color: #ffffff12;
+  color: white;
+  opacity: 0.07;
   line-height: 1;
 }
 .hero-copy {
@@ -317,13 +325,13 @@ a {
   background: linear-gradient(135deg, var(--c1), var(--c2));
   overflow: hidden;
 }
-.event-art:before {
-  content: "✳";
+.event-bloom {
   font-size: 195px;
   position: absolute;
   right: -25px;
   top: -74px;
-  color: #ffffff30;
+  color: white;
+  opacity: 0.19;
 }
 .event-art .art-emoji {
   font-size: 62px;
@@ -732,7 +740,8 @@ a {
   font-size: 500px;
   bottom: -280px;
   right: -80px;
-  color: #ffffff1c;
+  color: white;
+  opacity: 0.11;
 }
 .auth-panel {
   display: grid;

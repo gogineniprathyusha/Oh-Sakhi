@@ -2,6 +2,7 @@ import { categories } from "../features/events/catalog.ts";
 import type { CommunityEvent } from "../features/events/types.ts";
 import { EventCard } from "../components/EventCard.tsx";
 import { Empty } from "../components/Empty.tsx";
+import { Bloom } from "../components/Bloom.tsx";
 export function Discover({
   events,
   filter,
@@ -34,6 +35,7 @@ export function Discover({
   return (
     <div className="content">
       <section className="hero">
+        <Bloom className="hero-bloom" />
         <div className="hero-copy">
           <div className="eyebrow">A COMMUNITY FOR WOMEN · RICHMOND, VA</div>
           <h1>
@@ -89,7 +91,7 @@ export function Discover({
         <Empty
           title="Nothing here just yet"
           description="Try a different interest, or host the first plan yourself."
-          emoji="✳"
+          icon={<Bloom />}
         />
       )}
       <div className="box">

@@ -124,7 +124,7 @@ npm run check       # Strict TypeScript for app/tests plus ESLint
 npm run check:functions # Deno type checking for the Edge Function
 npm test            # Event status, capacity and configuration
 npm run test:db     # Real temporary PostgreSQL: RLS, migrations, history and races
-npm run test:e2e    # Chrome: desktop/mobile, auth fixtures and design comparison
+npm run test:e2e    # Chrome suite plus mobile WebKit brand-rendering checks
 npm run build      # Type checks and production output in dist/
 npm run preview    # Serve dist/ locally
 npm run format     # Consistent source formatting
@@ -132,7 +132,7 @@ npm run format     # Consistent source formatting
 
 Database tests use bundled PostgreSQL binaries and a fresh temporary database on loopback; they never read a remote database URL. Auth and Storage table interfaces are fixtures. The first group verifies the historical foundation, then the organiser-workflow migration is applied and current permissions are tested.
 
-Browser tests need Google Chrome and start isolated Vite servers on **5183 and 5184**. The configured test server uses intercepted responses, not a real Supabase project. Optional reference tests read `~/Downloads/her-hour-interactive-preview.html`; override with `HER_HOUR_REFERENCE_HTML` if necessary. Screenshots/traces go into ignored `test-results/`.
+Browser tests need Google Chrome and Playwright WebKit (`npx playwright install webkit`) and start isolated Vite servers on **5183 and 5184**. The Chrome project runs the full suite; the mobile WebKit project verifies brand colors and usable event/login controls at 320px, 390px and 440px. Brand artwork uses SVG to avoid device-dependent emoji rendering. The configured test server uses intercepted responses, not a real Supabase project. Optional reference tests read `~/Downloads/her-hour-interactive-preview.html`; override with `HER_HOUR_REFERENCE_HTML` if necessary. Screenshots/traces go into ignored `test-results/`.
 
 ## Remaining launch work
 

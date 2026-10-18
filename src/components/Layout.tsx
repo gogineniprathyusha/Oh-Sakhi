@@ -1,4 +1,5 @@
 import { Avatar } from "./Avatar.tsx";
+import { Bloom } from "./Bloom.tsx";
 import { LegalLinks } from "./LegalLinks.tsx";
 import type { ReactNode } from "react";
 import type { Page } from "../features/events/types.ts";
@@ -68,7 +69,7 @@ export function Layout({
       <div className="app-shell" inert={modalOpen}>
         <aside className="sidebar">
           <a className="brand" href="#discover" onClick={home}>
-            <span className="brand-flower">✳</span>
+            <Bloom className="brand-flower" />
             <span>
               her <i>hour</i>
               <small>oh sakhi! · your time, your circle</small>
@@ -90,7 +91,7 @@ export function Layout({
         <div className="main">
           <header className="topbar">
             <a className="mobile-brand" href="#discover" onClick={home}>
-              ✳ her <i>hour</i>
+              <Bloom /> her <i>hour</i>
             </a>
             <span className="top-location">📍 Richmond, VA</span>
             <div className="top-actions">
