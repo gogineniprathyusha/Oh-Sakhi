@@ -105,8 +105,13 @@ export function Information({ page }: { page: InformationPage }) {
               app currently loads fonts from Google Fonts, which receives
               network requests from your browser. Our hosting and infrastructure
               providers may process technical logs needed to operate the
-              service. We do not currently implement advertising trackers or
-              event email notifications.
+              service. Resend processes recipient email addresses and event
+              details to deliver RSVP confirmations, date/time/venue changes,
+              cancellations and reminders. These are service messages for events
+              you join. Cancel an active RSVP in My plans to stop its future
+              updates and reminders. Delivery records help us retry failures and
+              stop sending to addresses that bounce or report spam. We do not
+              implement advertising trackers.
             </p>
             <p>
               Your browser stores session information to keep you signed in.

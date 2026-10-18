@@ -6,6 +6,7 @@ import type { CommunityEvent } from "../features/events/types.ts";
 export function usePublicEvents(enabled: boolean) {
   const [events, setEvents] = useState<CommunityEvent[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const generation = useRef(0);
   const active = useRef(enabled);
@@ -22,13 +23,17 @@ export function usePublicEvents(enabled: boolean) {
       if (active.current && generation.current === ticket)
         setError("We couldn’t load experiences. Please try again.");
     } finally {
-      if (active.current && generation.current === ticket) setLoading(false);
+      if (active.current && generation.current === ticket) {
+        setLoading(false);
+        setLoaded(true);
+      }
     }
   }, [enabled]);
   useEffect(() => {
     setEvents([]);
     setError("");
     setLoading(false);
+    setLoaded(false);
     void refresh();
     return () => {
       generation.current++;
@@ -37,6 +42,7 @@ export function usePublicEvents(enabled: boolean) {
   return {
     events: enabled ? events : [],
     loading,
+    loaded,
     error: configured
       ? error
       : "Experiences are temporarily unavailable. Please check back soon.",

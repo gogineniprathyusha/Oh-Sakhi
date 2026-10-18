@@ -99,6 +99,46 @@ export function App() {
     setMessage(text);
     timer.current = setTimeout(() => setMessage(""), 6500);
   }, []);
+  // Email links survive the login screen; only already-authorised event data is used.
+  const linkedEvent = useRef(new URLSearchParams(location.search).get("event"));
+  const handledLink = useRef<string | null>(null);
+  useEffect(() => {
+    const id = linkedEvent.current;
+    if (!id || auth || session.loading || live.loading || publicEvents.loading)
+      return;
+    if (user && !data) return;
+    if (!user && !publicEvents.loaded) return;
+    const identity = user?.id ?? "guest";
+    if (handledLink.current === identity) return;
+    handledLink.current = identity;
+    if (events.some((event) => event.id === id)) {
+      setDialog({ kind: "details", id });
+      if (user) {
+        setPage("myplans");
+        linkedEvent.current = null;
+      }
+    } else if (user) {
+      setPage("myplans");
+      notify(
+        "This event is no longer available. Your RSVP history is in My plans.",
+      );
+      linkedEvent.current = null;
+    } else {
+      notify(
+        "Sign in with your RSVP account to view this event and your plans.",
+      );
+    }
+  }, [
+    auth,
+    session.loading,
+    live.loading,
+    publicEvents.loading,
+    publicEvents.loaded,
+    user,
+    data,
+    events,
+    notify,
+  ]);
   useEffect(() => () => clearTimeout(timer.current), []);
   useEffect(() => {
     document.title = `Her Hobby Hour — Oh Sakhi! | ${page === "discover" ? "Your time. Your circle." : page === "myplans" ? "My plans" : page === "host" ? "My hosted events" : page === "circle" ? "My circle" : page === "admin" ? "Admin dashboard" : "My profile"}`;

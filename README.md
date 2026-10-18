@@ -142,10 +142,14 @@ Hosted signup, email confirmation, login, profile persistence and logout have be
 
 Stage C adds cover upload/replacement/removal, deadlines, end times, public organiser names, drafts and clearer availability/history. Organisers publish immediately; member RSVPs confirm automatically within capacity. See [docs/stage-c-events.md](docs/stage-c-events.md) for the server upload boundary, the new migration, deployment steps and verification results.
 
-Stage D provides the protected admin dashboard, report review, member access controls, event moderation, statistics, CSV exports and audit history. Details are in [docs/stage-d-admin.md](docs/stage-d-admin.md). My circle clearly explains that connection requests and private messaging are not implemented. No notifications or real messages are simulated.
+Stage D provides the protected admin dashboard, report review, member access controls, event moderation, statistics, CSV exports and audit history. Details are in [docs/stage-d-admin.md](docs/stage-d-admin.md). My circle clearly explains that connection requests and private messaging are not implemented. Private messaging is not implemented. Stage F event email setup is documented below.
 
 Stage E adds public Privacy/Terms/Guidelines/Contact routes, password-confirmed account deletion, accessibility improvements, hosting headers/rewrites, CI and a launch/operations guide. See [docs/stage-e-launch.md](docs/stage-e-launch.md). Legal approval, domain/hosting approval, production Auth SMTP and retention/backup decisions remain owner-controlled launch steps. No public launch has been performed.
 
 The remaining feature stages are **F — event emails** (RSVP confirmations, changes, cancellations and reminders), and **G — community growth** (waitlists, improved discovery, announcements/preferences and member feedback).
 
 For later Vercel hosting, use the Vite preset, `npm run build`, and output directory `dist`. Set the public environment variables in the hosting project and update Supabase’s auth URLs to the deployed origin. No public deployment has been performed.
+
+## Stage F — event emails
+
+RSVP confirmations, date/time/venue changes, cancellations and 24-hour reminders use a private transactional queue, protected Supabase worker and signed Resend delivery webhooks. Apply `202610180002_event_emails.sql` once; delivery starts disabled. See [the activation guide](docs/stage-f-email-notifications.md) for the Resend webhook, the two Edge Function deployments and the separate hosted cron/Vault configuration and delivery activation scripts. No frontend secret or GoDaddy change is needed. Git/Vercel deployment does not apply SQL or enable email delivery.

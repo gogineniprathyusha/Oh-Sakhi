@@ -14,7 +14,11 @@ export default defineConfig({
     { name: "chrome", use: { browserName: "chromium", channel: "chrome" } },
     {
       name: "mobile-webkit",
-      testMatch: ["**/branding.spec.ts", "**/public-photos.spec.ts"],
+      testMatch: [
+        "**/branding.spec.ts",
+        "**/public-photos.spec.ts",
+        "**/email-links.spec.ts",
+      ],
       use: { ...devices["iPhone 13"] },
     },
   ],
