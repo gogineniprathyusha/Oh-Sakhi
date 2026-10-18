@@ -3076,6 +3076,500 @@ test("public photos expose only current active avatars while profile data and up
   await close(client);
 });
 
+test("event emails are transactional, private, deduplicated, retry-safe and invalidated by event/RSVP changes", async () => {
+  const database = "event_email_tests";
+  await cluster.createDatabase(database);
+  const db = await connection(database);
+  await db.query(schemaFixture);
+  const files = (await readdir(migrationDir))
+    .filter((name) => name.endsWith(".sql"))
+    .sort();
+  await migrate(
+    db,
+    files.filter((name) => name < "202610180002"),
+  );
+  for (const name of ["host", "alice", "bea", "admin"])
+    await db.query(
+      "insert into auth.users(id,email,email_confirmed_at) values($1,$2,now())",
+      [ids[name], `${name}@example.test`],
+    );
+  await db.query("insert into private.admin_roles(user_id) values($1)", [
+    ids.admin,
+  ]);
+  const makeEvent = async () =>
+    (
+      await db.query(
+        `insert into public.meetups(host_id,title,category,event_date,event_time,starts_at,place,capacity,description)
+    values($1,'Email event','Coffee','2099-10-21','10:30',now()+interval '3 days','Public cafe',10,'An event for email integration tests.') returning *`,
+        [ids.host],
+      )
+    ).rows[0];
+  const rsvp = (actor: string, id: string) =>
+    as(
+      actor,
+      (c) => c.query("select public.request_meetup($1)", [id]),
+      database,
+    );
+  const withdraw = (actor: string, id: string) =>
+    as(
+      actor,
+      (c) => c.query("select public.withdraw_meetup_request($1)", [id]),
+      database,
+    );
+  const jobs = async (id: string) =>
+    (
+      await db.query(
+        "select * from private.event_emails where meetup_id=$1 order by kind",
+        [id],
+      )
+    ).rows;
+  const claim = async () =>
+    (await db.query("select public.claim_event_email() j")).rows[0].j;
+  const legacy = await makeEvent();
+  await rsvp("alice", legacy.id);
+  await migrate(db, ["202610180002_event_emails.sql"]);
+  assert.equal(
+    (
+      await db.query(
+        "select * from public.meetup_requests where meetup_id=$1 and status='approved'",
+        [legacy.id],
+      )
+    ).rowCount,
+    1,
+    "Existing approved registration survives migration",
+  );
+  assert.equal(
+    (await jobs(legacy.id)).length,
+    0,
+    "Installation starts disabled and never backfills confirmations",
+  );
+  await db.query(
+    "update private.email_config set enabled=true,worker_token_hash=encode(sha256(convert_to($1,'UTF8')),'hex')",
+    ["test-worker-token"],
+  );
+  assert.equal(
+    (await db.query("select public.authorize_email_worker('wrong') ok")).rows[0]
+      .ok,
+    false,
+  );
+  assert.equal(
+    (
+      await db.query(
+        "select public.authorize_email_worker('test-worker-token') ok",
+      )
+    ).rows[0].ok,
+    true,
+  );
+  for (const actor of ["guest", "alice", "admin"]) {
+    await denied(() =>
+      as(actor, (c) => c.query("select * from private.event_emails"), database),
+    );
+    await denied(() =>
+      as(actor, (c) => c.query("select public.claim_event_email()"), database),
+    );
+    await denied(() =>
+      as(
+        actor,
+        (c) =>
+          c.query("select public.authorize_email_worker('test-worker-token')"),
+        database,
+      ),
+    );
+  }
+  const e = await makeEvent();
+  await db.query("begin");
+  await db.query(
+    "insert into public.meetup_requests(meetup_id,user_id,status) values($1,$2,'approved')",
+    [e.id, ids.alice],
+  );
+  await db.query("rollback");
+  assert.equal(
+    (await jobs(e.id)).length,
+    0,
+    "Rolled-back reservations do not queue email",
+  );
+  await rsvp("alice", e.id);
+  await rsvp("alice", e.id);
+  let list = await jobs(e.id);
+  assert.equal(
+    list.length,
+    2,
+    "Repeated RSVP produces only one confirmation and one reminder",
+  );
+  const reminder = list.find((j) => j.kind === "reminder");
+  const originalRegistrationId = reminder.registration_id;
+  assert.equal(
+    new Date(reminder.due_at).getTime(),
+    new Date(e.starts_at).getTime() - 86400000,
+  );
+  const first = await claim();
+  assert.equal(first.kind, "confirmation");
+  assert.equal(first.email, "alice@example.test");
+  assert.equal(await claim(), null, "An active lease is not claimed twice");
+  const payload = {
+    from: "events@example.test",
+    to: [first.email],
+    subject: "Confirmed",
+    html: "<p>Confirmed</p>",
+    text: "Confirmed",
+    reply_to: "contact@example.test",
+  };
+  const prepared = await db.query(
+    "select public.prepare_event_email($1,$2,$3) payload",
+    [first.id, first.lease_token, payload],
+  );
+  assert.deepEqual(prepared.rows[0].payload, payload);
+  await db.query("select public.finish_event_email($1,$2,null,'timeout',30)", [
+    first.id,
+    first.lease_token,
+  ]);
+  await db.query(
+    "update private.event_emails set due_at=now()-interval '1 second' where id=$1",
+    [first.id],
+  );
+  const retry = await claim();
+  assert.equal(retry.id, first.id);
+  assert.notEqual(retry.lease_token, first.lease_token);
+  assert.deepEqual(
+    retry.payload,
+    payload,
+    "Retry body stays immutable after templates or sender change",
+  );
+  assert.deepEqual(
+    (
+      await db.query("select public.prepare_event_email($1,$2,$3) payload", [
+        retry.id,
+        retry.lease_token,
+        { ...payload, subject: "Changed template" },
+      ])
+    ).rows[0].payload,
+    payload,
+  );
+  const obsolete = await db.query(
+    "select public.prepare_event_email($1,$2,$3) payload",
+    [first.id, first.lease_token, payload],
+  );
+  assert.equal(
+    obsolete.rows[0].payload,
+    null,
+    "Expired worker cannot send with a stale lease",
+  );
+  await db.query(
+    "select public.finish_event_email($1,$2,'provider-email-1',null,null)",
+    [retry.id, retry.lease_token],
+  );
+  await db.query(
+    "select public.record_event_email_delivery('webhook-1','provider-email-1','email.delivered',now())",
+  );
+  await db.query(
+    "select public.record_event_email_delivery('webhook-1','provider-email-1','email.delivered',now())",
+  );
+  assert.equal(
+    (await db.query("select * from private.email_webhook_events")).rowCount,
+    1,
+  );
+  assert.ok(
+    (await jobs(e.id)).find((j) => j.kind === "confirmation").delivered_at,
+  );
+
+  await as(
+    "host",
+    (c) =>
+      c.query(
+        "update public.meetups set description='A changed description without an email.' where id=$1",
+        [e.id],
+      ),
+    database,
+  );
+  assert.equal(
+    (await jobs(e.id)).length,
+    2,
+    "Description-only edits do not send schedule emails",
+  );
+  await as(
+    "host",
+    (c) =>
+      c.query(
+        "update public.meetups set place='A new public cafe' where id=$1",
+        [e.id],
+      ),
+    database,
+  );
+  list = await jobs(e.id);
+  assert.equal(
+    list.filter((j) => j.kind === "update" && j.state === "queued").length,
+    1,
+  );
+  assert.equal(
+    list.filter((j) => j.kind === "reminder" && j.state === "queued").length,
+    1,
+  );
+  assert.equal(
+    list.filter((j) => j.kind === "reminder" && j.state === "cancelled").length,
+    1,
+  );
+  const update = await claim();
+  assert.equal(update.previous_event.place, "Public cafe");
+  await withdraw("alice", e.id);
+  assert.equal(
+    (
+      await db.query("select public.prepare_event_email($1,$2,$3) payload", [
+        update.id,
+        update.lease_token,
+        payload,
+      ])
+    ).rows[0].payload,
+    null,
+  );
+  assert.equal(
+    (await jobs(e.id)).filter((j) => ["queued", "processing"].includes(j.state))
+      .length,
+    0,
+  );
+  await rsvp("alice", e.id);
+  list = await jobs(e.id);
+  const fresh = list.find(
+    (j) => j.kind === "confirmation" && j.state === "queued",
+  );
+  assert.notEqual(fresh.registration_id, originalRegistrationId);
+  const reclaimed = await claim();
+  assert.equal(reclaimed.id, fresh.id);
+  // A worker crash releases its lease later and retains the same idempotency identity.
+  await db.query(
+    "update private.event_emails set leased_until=now()-interval '1 second' where id=$1",
+    [fresh.id],
+  );
+  const resumed = await claim();
+  assert.equal(resumed.id, fresh.id);
+  assert.notEqual(resumed.lease_token, reclaimed.lease_token);
+  // Ambiguous acknowledgements must never be retried beyond provider deduplication expiry.
+  await db.query(
+    "update private.event_emails set leased_until=now()-interval '1 second',first_attempt_at=now()-interval '24 hours' where id=$1",
+    [fresh.id],
+  );
+  assert.equal(await claim(), null);
+  assert.equal((await jobs(e.id)).find((j) => j.id === fresh.id).state, "dead");
+  await rsvp("bea", e.id);
+  await as(
+    "host",
+    (c) => c.query("select public.set_meetup_status($1,'cancelled')", [e.id]),
+    database,
+  );
+  list = await jobs(e.id);
+  assert.equal(
+    list.filter((j) => j.kind === "cancellation" && j.state === "queued")
+      .length,
+    2,
+    "Cancellation captures confirmed recipients before status changes",
+  );
+  assert.equal(
+    list.filter(
+      (j) =>
+        j.kind !== "cancellation" && ["queued", "processing"].includes(j.state),
+    ).length,
+    0,
+  );
+  const cancellation = await claim();
+  assert.equal(cancellation.kind, "cancellation");
+  await db.query("select public.prepare_event_email($1,$2,$3)", [
+    cancellation.id,
+    cancellation.lease_token,
+    { ...payload, to: [cancellation.email] },
+  ]);
+  await db.query(
+    "select public.finish_event_email($1,$2,'provider-cancel-1',null,null)",
+    [cancellation.id, cancellation.lease_token],
+  );
+  await db.query(
+    "select public.record_event_email_delivery('bounce-1','provider-cancel-1','email.bounced',now())",
+  );
+  assert.equal(
+    (
+      await db.query(
+        "select * from private.email_suppressions where email_hash=encode(sha256(convert_to(lower($1),'UTF8')),'hex')",
+        [cancellation.email],
+      )
+    ).rowCount,
+    1,
+  );
+  const other = await claim();
+  assert.equal(other.kind, "cancellation");
+  await db.query("select public.prepare_event_email($1,$2,$3)", [
+    other.id,
+    other.lease_token,
+    { ...payload, to: [other.email] },
+  ]);
+  await db.query(
+    "select public.finish_event_email($1,$2,'provider-cancel-2',null,null)",
+    [other.id, other.lease_token],
+  );
+  await db.query(
+    "select public.record_event_email_delivery('complaint-1','provider-cancel-2','email.complained',now())",
+  );
+  assert.equal(
+    (await db.query("select * from private.email_suppressions")).rowCount,
+    2,
+  );
+  const late = await makeEvent();
+  await db.query(
+    "update public.meetups set starts_at=now()+interval '12 hours',registration_deadline=now()+interval '10 hours' where id=$1",
+    [late.id],
+  );
+  await rsvp("alice", late.id);
+  assert.equal(
+    (await jobs(late.id)).length,
+    1,
+    "Late RSVP queues no redundant reminder",
+  );
+  assert.equal(
+    await claim(),
+    null,
+    "Suppressed recipients receive no new sends",
+  );
+  const deleted = await makeEvent();
+  await rsvp("bea", deleted.id);
+  await db.query("delete from auth.users where id=$1", [ids.bea]);
+  assert.equal(
+    (await jobs(deleted.id)).length,
+    0,
+    "Account deletion removes queued personal data",
+  );
+  // Independent workers skip one another's locked jobs rather than double-claiming.
+  await db.query("delete from private.email_suppressions");
+  const parallelA = await makeEvent(),
+    parallelB = await makeEvent();
+  await rsvp("alice", parallelA.id);
+  await rsvp("alice", parallelB.id);
+  const workerA = await connection(database),
+    workerB = await connection(database);
+  await workerA.query("begin");
+  await workerB.query("begin");
+  await workerB.query("set local lock_timeout='1s'");
+  const aJob = (await workerA.query("select public.claim_event_email() j"))
+    .rows[0].j;
+  const bJob = (await workerB.query("select public.claim_event_email() j"))
+    .rows[0].j;
+  assert.notEqual(
+    aJob.id,
+    bJob.id,
+    "Separate workers atomically claim different jobs",
+  );
+  await workerA.query("rollback");
+  await workerB.query("rollback");
+  await close(workerA);
+  await close(workerB);
+  await withdraw("alice", parallelA.id);
+  await withdraw("alice", parallelB.id);
+  const reminderEvent = await makeEvent();
+  await rsvp("alice", reminderEvent.id);
+  await db.query(
+    "update private.event_emails set state='sent' where meetup_id=$1 and kind='confirmation'",
+    [reminderEvent.id],
+  );
+  await db.query(
+    "update private.event_emails set due_at=now()-interval '1 minute' where meetup_id=$1 and kind='reminder'",
+    [reminderEvent.id],
+  );
+  const dueReminder = await claim();
+  assert.equal(dueReminder.kind, "reminder");
+  await as(
+    "host",
+    (c) =>
+      c.query(
+        "update public.meetups set starts_at=starts_at+interval '1 day' where id=$1",
+        [reminderEvent.id],
+      ),
+    database,
+  );
+  assert.equal(
+    (
+      await db.query("select public.prepare_event_email($1,$2,$3) payload", [
+        dueReminder.id,
+        dueReminder.lease_token,
+        payload,
+      ])
+    ).rows[0].payload,
+    null,
+  );
+  const rescheduled = (await jobs(reminderEvent.id)).find(
+    (j) => j.kind === "reminder" && j.state === "queued",
+  );
+  assert.equal(
+    new Date(rescheduled.due_at).getTime(),
+    new Date(reminderEvent.starts_at).getTime(),
+    "Rescheduled reminder tracks the new instant minus 24h",
+  );
+  await withdraw("alice", reminderEvent.id);
+  const maxAttemptsEvent = await makeEvent();
+  await rsvp("alice", maxAttemptsEvent.id);
+  await db.query(
+    "update private.event_emails set attempts=8 where meetup_id=$1 and kind='confirmation'",
+    [maxAttemptsEvent.id],
+  );
+  assert.equal(await claim(), null);
+  assert.equal(
+    (await jobs(maxAttemptsEvent.id)).find((j) => j.kind === "confirmation")
+      .state,
+    "dead",
+  );
+  await withdraw("alice", maxAttemptsEvent.id);
+  const unconfirmed = await makeEvent();
+  await db.query("update auth.users set email_confirmed_at=null where id=$1", [
+    ids.alice,
+  ]);
+  await rsvp("alice", unconfirmed.id);
+  assert.equal(
+    await claim(),
+    null,
+    "Unconfirmed recipient addresses never receive queued mail",
+  );
+  await db.query("update auth.users set email_confirmed_at=now() where id=$1", [
+    ids.alice,
+  ]);
+  await withdraw("alice", unconfirmed.id);
+  const moderated = await makeEvent();
+  await rsvp("alice", moderated.id);
+  await as(
+    "admin",
+    (c) =>
+      c.query(
+        "select public.moderate_meetup($1,'A community violation test case')",
+        [moderated.id],
+      ),
+    database,
+  );
+  assert.equal(
+    (await jobs(moderated.id)).filter(
+      (j) => j.kind === "cancellation" && j.state === "queued",
+    ).length,
+    1,
+  );
+  // Correctly signed callback can arrive before the worker writes its provider ID.
+  const inflight = await claim();
+  await db.query("select public.prepare_event_email($1,$2,$3)", [
+    inflight.id,
+    inflight.lease_token,
+    payload,
+  ]);
+  await db.query(
+    "select public.record_event_email_delivery('early-webhook','early-provider','email.delivered',now(),$1)",
+    [inflight.id],
+  );
+  assert.equal(
+    (await jobs(moderated.id)).find((j) => j.id === inflight.id).provider_id,
+    "early-provider",
+  );
+  await db.query(
+    "select public.finish_event_email($1,$2,'early-provider',null,null)",
+    [inflight.id, inflight.lease_token],
+  );
+  assert.equal(
+    (await jobs(moderated.id)).find((j) => j.id === inflight.id).state,
+    "sent",
+  );
+  await close(db);
+});
+
 test("all migrations also apply to an empty project with immediate member publication", async () => {
   await cluster.createDatabase("current_fresh");
   const client = await connection("current_fresh");

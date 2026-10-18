@@ -2,7 +2,6 @@
 
 > Update: browser demo mode has been removed. Signed-out visitors now browse published Supabase events and sign in for account actions. Demo references below describe earlier-stage behavior and verification.
 
-
 This change supersedes organiser approval of attendance. Events still publish immediately, organisers edit/cancel their own events, and administrators retain violation-removal access.
 
 ## Current behavior
@@ -13,7 +12,7 @@ This change supersedes organiser approval of attendance. Events still publish im
 - Organisers use **View attendees** for a read-only list of confirmed/non-attending members. There are no approval, decline, reconsideration or revocation controls. They still cancel the event directly from details.
 - My plans shows events the member has joined and their RSVP history. My hosted events contains only events they created, including drafts and cancelled events.
 
-No waitlist, notifications or automatic emails are added.
+No waitlist is added by the RSVP migration. Stage F adds event emails through a separate, explicitly activated migration and worker; see [stage-f-email-notifications.md](stage-f-email-notifications.md).
 
 ## Database and upgrade
 

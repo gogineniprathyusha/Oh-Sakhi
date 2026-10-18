@@ -9,3 +9,15 @@ entrypoint = "./functions/event-image/index.ts"
 enabled = true
 verify_jwt = true
 entrypoint = "./functions/delete-account/index.ts"
+
+[functions.event-emails]
+enabled = true
+# Custom worker bearer token is checked against its private database hash.
+verify_jwt = false
+entrypoint = "./functions/event-emails/index.ts"
+
+[functions.email-webhook]
+enabled = true
+# Resend sends Svix signatures, not Supabase JWTs. Handler verifies raw-body HMAC.
+verify_jwt = false
+entrypoint = "./functions/email-webhook/index.ts"

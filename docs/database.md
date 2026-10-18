@@ -19,10 +19,12 @@ Apply files in filename order, once each. Do not edit migrations that have alrea
 | `202610170007_rsvp_counter_fix.sql`                | Separate insert/update reservation paths and reconcile mismatched counters                                        |
 | `202610170008_admin_dashboard.sql`                 | Bounded administrator reads, recorded report/access decisions, audit access and authorised attendee exports       |
 | `202610170009_account_deletion.sql`                | Own-account summary, server-only deletion preparation/file listing and protected pending access                   |
-| `202610170010_flexible_group_size.sql`              | Positive whole-number group sizes without the original 30-seat limit; existing capacity enforcement is retained     |
-| `202610180001_public_profile_photos.sql`            | Public current photos, host photo paths and bounded avatar lookup; private profile fields remain protected          |
+| `202610170010_flexible_group_size.sql`             | Positive whole-number group sizes without the original 30-seat limit; existing capacity enforcement is retained   |
+| `202610180001_public_profile_photos.sql`           | Public current photos, host photo paths and bounded avatar lookup; private profile fields remain protected        |
 
-The historical foundation required administrator publication. **The organiser-workflow migration replaces that policy.** Apply all thirteen files for the current application and deploy `event-image` for covers and `delete-account` for account deletion. The frontend reads `meetup_directory` and uses registration RPCs; it does not write registration rows directly. Existing manual SQL Editor installations should apply only outstanding files. Apply `202610170010_flexible_group_size.sql` before entering group sizes above 30 or below 2. Group sizes must be positive integers within PostgreSQL's integer range (1–2,147,483,647), and cannot be reduced below the confirmed attendee count.
+`202610180002_event_emails.sql` adds the private event email outbox, registration generations, event revisions and service-only delivery RPCs. It preserves existing data and starts delivery disabled. The separate `supabase/setup/enable_event_emails.sql` script enables hosted cron/Vault delivery after worker/webhook configuration.
+
+The historical foundation required administrator publication. **The organiser-workflow migration replaces that policy.** Apply all fourteen files for the current application and deploy `event-image` for covers and `delete-account` for account deletion. The frontend reads `meetup_directory` and uses registration RPCs; it does not write registration rows directly. Existing manual SQL Editor installations should apply only outstanding files. Apply `202610170010_flexible_group_size.sql` before entering group sizes above 30 or below 2. Group sizes must be positive integers within PostgreSQL's integer range (1–2,147,483,647), and cannot be reduced below the confirmed attendee count.
 
 The first foundation migration classifies legacy events as drafts because they previously had no publication status. Their registrations are preserved. The organiser-workflow migration keeps those drafts private to avoid unexpectedly publishing unfinished content. Their organiser can publish them directly, with no admin review. Newly created events default to `published`.
 
@@ -41,7 +43,7 @@ Guests can read published events from active organisers, not private profiles or
 
 ## Final permission model
 
-Members create events under their own account. Organisers publish or save drafts directly, edit their own active events, view attendees and cancel events. Edits to title, time, location, description, capacity or imagery keep publication and registrations intact and mark `details_updated_at`. Attendees see a details-changed notice; automated notifications are not implemented.
+Members create events under their own account. Organisers publish or save drafts directly, edit their own active events, view attendees and cancel events. Edits to title, time, location, description, capacity or imagery keep publication and registrations intact and mark `details_updated_at`. Attendees see a details-changed notice. Stage F queues service emails once explicitly enabled; see [stage-f-email-notifications.md](stage-f-email-notifications.md).
 
 Members RSVP through `request_meetup` and receive a confirmed seat immediately, within capacity and before the registration deadline/start. The organiser and administrators do not approve or decline attendance. Members cancel their own RSVP and may reserve again when eligible. The old decision RPC is retained for migration history but execution by browser roles is revoked. See [instant-rsvps.md](instant-rsvps.md) for legacy status handling.
 
@@ -60,7 +62,7 @@ Use the current authenticated session for member actions. Public photo lookup ac
 | `set_meetup_status`       | `p_meetup_id`, `p_status`                      | Event organiser; draft/published/cancelled/completed transitions  |
 | `moderate_meetup`         | `p_meetup_id`, `p_reason` (10–1000 characters) | Active administrator                                              |
 | `get_meetup_attendees`    | `p_meetup_id`                                  | Organiser/admin; minimal display name and request state           |
-| `get_public_avatars`    | `p_user_ids` (up to 100 UUIDs)                 | Public; current avatar paths of active members only              |
+| `get_public_avatars`      | `p_user_ids` (up to 100 UUIDs)                 | Public; current avatar paths of active members only               |
 | `get_my_access`           | None                                           | Current member’s status and trusted admin flag                    |
 | `set_member_interests`    | `p_interest_ids`                               | Current active member                                             |
 | `set_member_access`       | `p_user_id`, `p_status`, `p_reason`            | Administrator                                                     |
