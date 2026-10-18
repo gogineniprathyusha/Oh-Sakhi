@@ -3,7 +3,7 @@
 > Update: browser demo mode has been removed. Signed-out visitors now browse published Supabase events and sign in for account actions. Demo references below describe earlier-stage behavior and verification.
 
 
-The member profile editor uses the existing Supabase schema and private Storage bucket. This change adds no migrations. Keep the six applied migrations unchanged.
+The original Stage B editor added no migrations. Public profile photos now require the additive `202610180001_public_profile_photos.sql` migration; keep all previously applied migrations unchanged.
 
 ## Member experience
 
@@ -13,7 +13,7 @@ Interest choices come from the database, including migrated legacy choices. A si
 
 Demo profiles keep their browser-only editor. They do not upload photos, contact Storage, or transfer data into real accounts.
 
-## Private photos
+## Public profile photos
 
 The UI accepts JPEG, PNG and WebP files up to 2 MiB. Before upload, it checks size, declared MIME type and file signature, decodes the image, rejects images above 25 million pixels, and re-encodes it with a maximum edge of 1024 pixels. Re-encoding discards source metadata. These are browser checks; a custom client can bypass them. Bucket size/MIME restrictions, owned paths, active-member checks and RLS enforce the server boundary. Server inspection of image bytes remains future upload-endpoint work.
 
@@ -21,9 +21,9 @@ Uploads use a new random filename under the member's UUID in the private `profil
 
 After linking the replacement, the app removes the previous object. Cleanup checks the current profile first and refuses to delete its active photo. An unused upload is removed when linking fails. Failed cleanup offers **Retry removal** and pauses further photo changes until it succeeds. Cleanup retries are held in page memory; closing the page during a failed cleanup may leave a private unused object for later maintenance. Profile writes and Storage operations are separate service requests, not a cross-service transaction.
 
-Photos are downloaded using the authenticated Supabase client and displayed through local blob URLs. The app does not create public or signed photo URLs. It revokes local URLs when the application unmounts, the photo changes, or the member logs out. Blob URLs and photo bytes are not stored in demo state. Administrator access remains controlled by the existing database policies.
+Current photos are public by default, including existing uploads. Guests can see host photos on event cards/details; organisers/admins can see attendee photos in the protected attendee list. The bucket stays private: anonymous RLS allows only active members’ current referenced images, while unused, replaced and removed images remain restricted. Other profile fields stay private. Photos are downloaded using the Supabase client and displayed through local blob URLs. The app does not create public or signed photo URLs. It revokes local URLs when the application unmounts, the photo changes, or the member logs out. Blob URLs and photo bytes are not stored in demo state. Administrator access remains controlled by the existing database policies.
 
-## Verification
+## Historical Stage B verification
 
 Automated browser checks use the real Supabase SDK with intercepted service responses. They cover save/reload, catalog failures, twelve-choice limits, private downloads, upload/replacement/removal, invalid files, rejected uploads, failed linking and cleanup, concurrent edits, interrupted responses, logout and mobile layouts. Unit checks cover file signatures, sizes and owned paths. These fixtures do not substitute for a hosted Storage test.
 

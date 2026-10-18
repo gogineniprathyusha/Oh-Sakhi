@@ -30,6 +30,33 @@ interface Flags {
   deleteFailure: boolean;
 }
 export async function profileMock(page: Page, withPhoto = false) {
+  // WebKit's interception protocol can omit Blob bytes from multipart postData.
+  // Retain the actual Blob passed to fetch for the mocked Storage service.
+  await page.addInitScript(() => {
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = async (input, options) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (
+        url.includes("/storage/v1/object/profile-photos/") &&
+        options?.body instanceof FormData
+      ) {
+        const blob = [...options.body.values()].find(
+          (value) => value instanceof Blob,
+        );
+        if (blob instanceof Blob) {
+          (
+            window as typeof window & {
+              __profileTestUpload?: { bytes: number[]; type: string };
+            }
+          ).__profileTestUpload = {
+            bytes: Array.from(new Uint8Array(await blob.arrayBuffer())),
+            type: blob.type,
+          };
+        }
+      }
+      return originalFetch(input, options);
+    };
+  });
   const flags: Flags = {
     catalogFailure: false,
     saveFailure: false,
@@ -129,10 +156,21 @@ export async function profileMock(page: Page, withPhoto = false) {
         const contentType = request.headers()["content-type"];
         const boundary = contentType.split("boundary=")[1];
         const end = buffer.indexOf(Buffer.from(`\r\n--${boundary}`), start);
-        files.set(path, {
-          bytes: buffer.subarray(start, end),
-          type: header[1],
-        });
+        let bytes = buffer.subarray(start, end);
+        if (!bytes.length) {
+          const upload = await page.evaluate(
+            () =>
+              (
+                window as typeof window & {
+                  __profileTestUpload?: { bytes: number[]; type: string };
+                }
+              ).__profileTestUpload,
+          );
+          if (!upload?.bytes.length || upload.type !== header[1])
+            throw Error("Missing image bytes in mocked upload");
+          bytes = Buffer.from(upload.bytes);
+        }
+        files.set(path, { bytes, type: header[1] });
         await json({ Key: `profile-photos/${path}`, Id: "test-object" });
         return true;
       }

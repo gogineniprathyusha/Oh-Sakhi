@@ -33,6 +33,21 @@ export async function downloadPhoto(userId: string, path: string) {
     );
   return data;
 }
+export async function loadPublicAvatars(userIds: string[]) {
+  const ids = [...new Set(userIds)];
+  const photos = new Map<string, string>();
+  for (let index = 0; index < ids.length; index += 100) {
+    const { data, error } = await client().rpc("get_public_avatars", {
+      p_user_ids: ids.slice(index, index + 100),
+    });
+    if (error) throw error;
+    for (const row of data ?? []) {
+      if (isOwnedPhoto(row.user_id, row.avatar_path))
+        photos.set(row.user_id, row.avatar_path);
+    }
+  }
+  return photos;
+}
 export async function removeUnusedPhoto(userId: string, path: string) {
   if (!isOwnedPhoto(userId, path))
     throw Error("This photo is not part of your profile.");

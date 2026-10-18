@@ -1,6 +1,7 @@
 import type { CommunityEvent, Registration } from "./types.ts";
 import { seats } from "./utils.ts";
 import { AttendeeExport } from "./AttendeeExport.tsx";
+import { MemberAvatar } from "../../components/MemberAvatar.tsx";
 interface Props {
   event: CommunityEvent;
   rows: Registration[];
@@ -29,15 +30,22 @@ export function RequestManager({
       {!rows.length && <p>No RSVPs yet.</p>}
       {rows.map((row) => (
         <div className="request-row" key={row.user_id}>
-          <div>
-            <strong>{row.display_name ?? row.user_id}</strong>
-            <small>
-              {row.status === "approved"
-                ? "Confirmed"
-                : row.status === "pending"
-                  ? "Not confirmed"
-                  : "Not attending"}
-            </small>
+          <div className="request-member">
+            <MemberAvatar
+              name={row.display_name ?? "Member"}
+              userId={row.user_id}
+              path={row.avatar_path}
+            />
+            <div>
+              <strong>{row.display_name ?? row.user_id}</strong>
+              <small>
+                {row.status === "approved"
+                  ? "Confirmed"
+                  : row.status === "pending"
+                    ? "Not confirmed"
+                    : "Not attending"}
+              </small>
+            </div>
           </div>
         </div>
       ))}

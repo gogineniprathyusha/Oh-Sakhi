@@ -89,7 +89,11 @@ for (const width of [1440, 390, 320]) {
     const hosted = page
       .locator(".event-card")
       .filter({ hasText: "My coffee meetup" });
-    await expect(hosted.locator(".event-body > p")).toHaveText([
+    await expect(
+      hosted.locator(
+        ".event-venue, .event-description, .event-host > span:not(.avatar)",
+      ),
+    ).toHaveText([
       "📍 Richmond public cafe",
       String(base.description),
       "Hosted by You",

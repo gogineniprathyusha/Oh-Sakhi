@@ -43,8 +43,9 @@ export function PhotoEditor({
   return (
     <div className="profile-photo-editor">
       <p className="small muted">
-        Your photo is private. JPEG, PNG or WebP, up to 2 MiB. Photos are
-        resized and their original metadata is removed.
+        Your profile photo is publicly visible, including to people who aren’t
+        signed in. JPEG, PNG or WebP, up to 2 MiB. Photos are resized and their
+        original metadata is removed.
       </p>
       <div className="detail-actions">
         <button

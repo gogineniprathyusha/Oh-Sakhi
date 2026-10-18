@@ -39,7 +39,7 @@ Admin removal hides the event from discovery, cancels active RSVPs and preserves
 
 ## Connect Supabase when ready
 
-The application has been connected and its authentication flows checked against the development Supabase project. Results are recorded in [docs/authentication-verification.md](docs/authentication-verification.md); profile editing and private photos are documented in [docs/member-profiles.md](docs/member-profiles.md). For a new project, follow the setup steps below. Detailed schema and API notes are in [docs/database.md](docs/database.md).
+The application has been connected and its authentication flows checked against the development Supabase project. Results are recorded in [docs/authentication-verification.md](docs/authentication-verification.md); profile editing and public photo visibility are documented in [docs/member-profiles.md](docs/member-profiles.md). For a new project, follow the setup steps below. Detailed schema and API notes are in [docs/database.md](docs/database.md).
 
 1. Create your Supabase development project.
 2. In its SQL Editor, apply these files **once each, in this order**. Deploy `event-image` before its image migration and `delete-account` before its deletion migration, following the linked stage guides:
@@ -57,6 +57,7 @@ The application has been connected and its authentication flows checked against 
    supabase/migrations/202610170008_admin_dashboard.sql
    supabase/migrations/202610170009_account_deletion.sql
    supabase/migrations/202610170010_flexible_group_size.sql
+   supabase/migrations/202610180001_public_profile_photos.sql
    ```
 
    If some migrations are already applied, run only the outstanding ones. The organiser-workflow migration supersedes the earlier admin-publication rules. Previously saved drafts remain private and can be published directly by their organiser; existing registrations are retained. The Stage C image migration requires the `event-image` function for cover changes; follow [its deployment order](docs/stage-c-events.md).
@@ -95,7 +96,7 @@ Oh Sakhi/
 │   ├── components/               # Shared layout, cards, accessible modal and forms
 │   ├── pages/                    # Discover, My plans, My hosted events, Circle, Profile, Auth, Admin
 │   ├── features/events/          # Event types, details, request manager and date rules
-│   ├── features/profile/         # Interest choices, image preparation and private photo API
+│   ├── features/profile/         # Interest choices, image preparation and owned/public photo APIs
 │   ├── features/admin/           # Protected API boundary, moderation forms and record lists
 │   ├── features/account/         # Deliberate account deletion and retry UI
 │   ├── hooks/                    # Auth/session and member-data loading

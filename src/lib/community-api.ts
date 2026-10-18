@@ -1,5 +1,6 @@
 import { supabase } from "./supabase.ts";
 import { themes } from "../features/events/catalog.ts";
+import { loadPublicAvatars } from "../features/profile/profile-api.ts";
 import type {
   CommunityEvent,
   EventInput,
@@ -38,6 +39,7 @@ function mapEvent(
     capacity: row.capacity,
     description: row.description,
     host_id: row.host_id,
+    host_avatar_path: row.host_avatar_path,
     host: hostLabel(row.host_name),
     is_host: Boolean(userId && row.host_id === userId),
     emoji,
@@ -194,7 +196,14 @@ export async function attendees(id: string): Promise<Registration[]> {
     p_meetup_id: id,
   });
   check(error);
-  return data ?? [];
+  const rows: Registration[] = data ?? [];
+  try {
+    const photos = await loadPublicAvatars(rows.map((row) => row.user_id));
+    return rows.map((row) => ({ ...row, avatar_path: photos.get(row.user_id) }));
+  } catch {
+    // Photo availability must not prevent authorised attendance management.
+    return rows;
+  }
 }
 export async function exportAttendees(id: string): Promise<Registration[]> {
   const { data, error } = await client().rpc("export_meetup_attendees", {
